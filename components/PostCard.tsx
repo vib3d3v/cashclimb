@@ -3,20 +3,47 @@ import Image from 'next/image'
 import type { Post } from '@/types'
 
 const CAT_COLORS: Record<string, string> = {
-  Investing:        '#D4AF37',
+  Investing: '#D4AF37',
   'Personal Finance': '#4A9B8E',
-  Credit:           '#C4704A',
-  Taxes:            '#7B68D4',
-  'Real Estate':    '#5A8C5A',
-  Retirement:       '#C46A8A',
+  Credit: '#C4704A',
+  Taxes: '#7B68D4',
+  'Real Estate': '#5A8C5A',
+  Retirement: '#C46A8A',
+}
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function getUseCase(category: string) {
+  switch (category) {
+    case 'Investing':
+      return 'Best for: Beginner investors'
+    case 'Personal Finance':
+      return 'Best for: Money management basics'
+    case 'Credit':
+      return 'Best for: Borrowing and credit decisions'
+    case 'Taxes':
+      return 'Best for: Tax-aware planning'
+    case 'Real Estate':
+      return 'Best for: Property-related decisions'
+    case 'Retirement':
+      return 'Best for: Long-term planning'
+    default:
+      return 'Best for: Practical financial decisions'
+  }
 }
 
 export default function PostCard({ post }: { post: Post }) {
   const color = CAT_COLORS[post.category] ?? '#888'
+  const author = post.author || 'CashClimb Editorial'
 
   return (
     <Link href={`/blog/${post.slug}`} className="post-card flex flex-col group">
-      {/* Cover image or pattern */}
       <div className="h-44 relative overflow-hidden bg-gradient-to-br from-[#0D1A14] to-[#1A1000] flex-shrink-0">
         {post.cover_url ? (
           <Image
@@ -30,7 +57,8 @@ export default function PostCard({ post }: { post: Post }) {
             <div
               className="absolute inset-0 opacity-[0.07]"
               style={{
-                backgroundImage: 'repeating-linear-gradient(45deg,#D4AF37 0,#D4AF37 1px,transparent 0,transparent 50%)',
+                backgroundImage:
+                  'repeating-linear-gradient(45deg,#D4AF37 0,#D4AF37 1px,transparent 0,transparent 50%)',
                 backgroundSize: '10px 10px',
               }}
             />
@@ -41,18 +69,21 @@ export default function PostCard({ post }: { post: Post }) {
         )}
       </div>
 
-      {/* Body */}
       <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 mb-3">
-          <span
-            className="cat-badge"
-            style={{ background: `${color}22`, color }}
-          >
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <span className="cat-badge" style={{ background: `${color}22`, color }}>
             {post.category}
+          </span>
+          <span className="cat-badge bg-[#1A1A1A] text-[#F0EDE8]">
+            Reviewed
           </span>
         </div>
 
-        <h3 className="font-serif text-lg font-bold leading-snug mb-2 text-[#F0EDE8] flex-1">
+        <div className="text-xs text-[#6A6460] mb-3">
+          Updated {formatDate(post.updated_at || post.created_at)} • {post.read_time}
+        </div>
+
+        <h3 className="font-serif text-lg font-bold leading-snug mb-2 text-[#F0EDE8]">
           {post.title}
         </h3>
 
@@ -60,9 +91,13 @@ export default function PostCard({ post }: { post: Post }) {
           {post.excerpt}
         </p>
 
-        <div className="flex justify-between items-center pt-4 border-t border-border text-xs">
-          <span className="text-[#6A6460] font-medium">{post.author}</span>
-          <span className="text-gold font-semibold">{post.read_time} read</span>
+        <div className="text-xs text-gold font-semibold mb-4">
+          {getUseCase(post.category)}
+        </div>
+
+        <div className="mt-auto pt-4 border-t border-border flex justify-between items-center gap-3">
+          <span className="text-xs text-[#9A9490]">Author: {author}</span>
+          <span className="text-gold font-semibold text-xs">Read Guide →</span>
         </div>
       </div>
     </Link>

@@ -1,0 +1,1288 @@
+diff --git a/app/blog/[slug]/page.tsx b/app/blog/[slug]/page.tsx
+index ca005f0..9842075 100644
+--- a/app/blog/[slug]/page.tsx
++++ b/app/blog/[slug]/page.tsx
+@@ -53,10 +53,9 @@ export async function generateStaticParams() {
+     .select('slug')
+     .eq('published', true)
+ 
+-  return data?.map(p => ({ slug: p.slug })) ?? []
++  return data?.map((p) => ({ slug: p.slug })) ?? []
+ }
+ 
+-// Strips nofollow from saved post HTML so all links are dofollow
+ function cleanPostBody(html: string): string {
+   return html
+     .replace(/rel="noopener noreferrer nofollow"/g, 'target="_blank"')
+@@ -64,6 +63,14 @@ function cleanPostBody(html: string): string {
+     .replace(/rel="nofollow"/g, '')
+ }
+ 
++function formatDate(date: string) {
++  return new Date(date).toLocaleDateString('en-US', {
++    year: 'numeric',
++    month: 'long',
++    day: 'numeric',
++  })
++}
++
+ export default async function PostPage({ params }: Props) {
+   const supabase = createAdminClient()
+ 
+@@ -87,7 +94,6 @@ export default async function PostPage({ params }: Props) {
+   const comments: Comment[] = commentsRes.data ?? []
+   const color = CAT_COLORS[post.category] ?? '#888'
+ 
+-  // Related posts
+   const { data: related } = await supabase
+     .from('posts')
+     .select('*')
+@@ -102,7 +108,6 @@ export default async function PostPage({ params }: Props) {
+       <ViewTracker postId={post.id} path={`/blog/${post.slug}`} />
+ 
+       <main>
+-        {/* Article header */}
+         <div className="max-w-3xl mx-auto px-6 pt-12 pb-0">
+           <Link
+             href="/blog"
+@@ -111,41 +116,51 @@ export default async function PostPage({ params }: Props) {
+             ← Back to Articles
+           </Link>
+ 
+-          <div className="flex items-center gap-2 mb-4">
+-            <span
+-              className="cat-badge"
+-              style={{ background: `${color}22`, color }}
+-            >
++          <div className="flex items-center gap-2 mb-4 flex-wrap">
++            <span className="cat-badge" style={{ background: `${color}22`, color }}>
+               {post.category}
+             </span>
++            <span className="cat-badge bg-[#1A1A1A] text-[#F0EDE8]">
++              Reviewed
++            </span>
+           </div>
+ 
+           <h1 className="font-serif text-4xl lg:text-5xl font-black leading-[1.1] mb-6">
+             {post.title}
+           </h1>
+ 
+-          <div className="flex flex-wrap gap-6 text-sm pb-8 border-b border-border">
+-            <span className="font-semibold text-[#F0EDE8]">
+-              By {post.author}
+-            </span>
+-            <span className="text-[#9A9490]">
+-              {new Date(post.created_at).toLocaleDateString('en-US', {
+-                year: 'numeric',
+-                month: 'long',
+-                day: 'numeric',
+-              })}
+-            </span>
+-            <span className="text-gold font-semibold">
+-              {post.read_time} read
+-            </span>
+-            <span className="text-[#6A6460]">
+-              {post.view_count.toLocaleString()} views
+-            </span>
++          <div className="bg-bg-2 border border-border rounded-2xl p-6 mb-8">
++            <div className="grid sm:grid-cols-2 gap-4 text-sm">
++              <div>
++                <div className="text-[#6A6460] mb-1">Written by</div>
++                <div className="text-[#F0EDE8] font-semibold">
++                  {post.author || 'CashClimb Editorial'}
++                </div>
++              </div>
++
++              <div>
++                <div className="text-[#6A6460] mb-1">Last updated</div>
++                <div className="text-[#F0EDE8] font-semibold">
++                  {formatDate(post.updated_at || post.created_at)}
++                </div>
++              </div>
++
++              <div>
++                <div className="text-[#6A6460] mb-1">Reading time</div>
++                <div className="text-gold font-semibold">{post.read_time}</div>
++              </div>
++
++              <div>
++                <div className="text-[#6A6460] mb-1">Views</div>
++                <div className="text-[#9A9490] font-medium">
++                  {post.view_count.toLocaleString()}
++                </div>
++              </div>
++            </div>
+           </div>
+         </div>
+ 
+-        {/* Cover image */}
+-        <div className="max-w-3xl mx-auto px-6 mt-8">
++        <div className="max-w-3xl mx-auto px-6">
+           {post.cover_url ? (
+             <div className="relative h-72 lg:h-96 rounded-2xl overflow-hidden">
+               <Image
+@@ -172,37 +187,55 @@ export default async function PostPage({ params }: Props) {
+           )}
+         </div>
+ 
+-        {/* Article body */}
+         <div className="max-w-3xl mx-auto px-6 py-10">
++          <div className="mb-8 bg-bg-2 border border-border rounded-2xl p-6">
++            <h2 className="font-serif text-xl font-bold mb-3 text-[#F0EDE8]">
++              What this article is for
++            </h2>
++            <p className="text-sm text-[#9A9490] leading-relaxed">
++              This guide is educational. It is designed to help readers
++              understand the topic, key tradeoffs, and practical next steps
++              before making important financial decisions.
++            </p>
++          </div>
++
+           <div
+             className="prose-cashclimb"
+             dangerouslySetInnerHTML={{ __html: cleanPostBody(post.body) }}
+           />
+ 
+-          {/* Disclaimer */}
+-          <div className="mt-12 p-5 bg-bg-2 border border-border rounded-xl">
+-            <p className="text-xs text-[#6A6460] leading-relaxed">
+-              <strong className="text-[#9A9490]">Disclaimer:</strong> The
+-              content on CashClimb is for informational and educational
+-              purposes only. It does not constitute financial, investment, or
+-              tax advice. Always consult a qualified financial professional
+-              before making investment decisions.
+-            </p>
++          <div className="mt-12 grid gap-4">
++            <div className="p-5 bg-bg-2 border border-border rounded-xl">
++              <p className="text-sm text-[#9A9490] leading-relaxed">
++                <strong className="text-[#F0EDE8]">Editorial note:</strong> CashClimb
++                aims to provide clear, plain-English financial education.
++                Articles should be interpreted as general information, not
++                personalised financial advice.
++              </p>
++            </div>
++
++            <div className="p-5 bg-bg-2 border border-border rounded-xl">
++              <p className="text-sm text-[#9A9490] leading-relaxed">
++                <strong className="text-[#F0EDE8]">Disclaimer:</strong> The
++                content on CashClimb is for informational and educational
++                purposes only. It does not constitute financial, investment, or
++                tax advice. Always consult a qualified professional before
++                making significant financial decisions.
++              </p>
++            </div>
+           </div>
+ 
+-          {/* Comments */}
+           <Comments postId={post.id} initial={comments} />
+         </div>
+       </main>
+ 
+-      {/* Related posts */}
+       {related && related.length > 0 && (
+         <section className="max-w-7xl mx-auto px-6 pb-20">
+           <h2 className="font-serif text-2xl font-bold section-title mb-6">
+             More in {post.category}
+           </h2>
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+-            {(related as Post[]).map(p => (
++            {(related as Post[]).map((p) => (
+               <PostCard key={p.id} post={p} />
+             ))}
+           </div>
+@@ -212,4 +245,4 @@ export default async function PostPage({ params }: Props) {
+       <Footer />
+     </>
+   )
+-}
+\ No newline at end of file
++}
+diff --git a/app/blog/page.tsx b/app/blog/page.tsx
+index 5c41e23..2635409 100644
+--- a/app/blog/page.tsx
++++ b/app/blog/page.tsx
+@@ -4,7 +4,15 @@ import Footer from '@/components/Footer'
+ import PostCard from '@/components/PostCard'
+ import type { Post } from '@/types'
+ 
+-const CATEGORIES = ['All', 'Investing', 'Personal Finance', 'Credit', 'Taxes', 'Real Estate', 'Retirement']
++const CATEGORIES = [
++  'All',
++  'Investing',
++  'Personal Finance',
++  'Credit',
++  'Taxes',
++  'Real Estate',
++  'Retirement',
++]
+ 
+ export const revalidate = 60
+ 
+@@ -15,7 +23,7 @@ interface Props {
+ export default async function BlogPage({ searchParams }: Props) {
+   const supabase = createAdminClient()
+   const category = searchParams.category
+-  const search   = searchParams.search
++  const search = searchParams.search
+ 
+   let query = supabase
+     .from('posts')
+@@ -33,30 +41,38 @@ export default async function BlogPage({ searchParams }: Props) {
+     <>
+       <Navbar />
+ 
+-      {/* Header */}
+       <div className="bg-bg-2 border-b border-border">
+-        <div className="max-w-7xl mx-auto px-6 py-12">
+-          <h1 className="font-serif text-4xl font-black mb-2">All Articles</h1>
+-          <p className="text-[#9A9490]">Practical financial insights to help you invest smarter and build lasting wealth.</p>
++        <div className="max-w-7xl mx-auto px-6 py-14">
++          <p className="text-xs font-bold tracking-widest uppercase text-gold mb-3">
++            Article Library
++          </p>
++          <h1 className="font-serif text-4xl font-black mb-3">
++            Practical financial guidance for real-world decisions.
++          </h1>
++          <p className="text-[#9A9490] max-w-2xl leading-relaxed">
++            Explore clear, plain-English articles on investing, debt,
++            retirement, credit, property, and personal finance.
++          </p>
+ 
+-          {/* Search + filters — client-side form */}
+-          <form method="GET" className="mt-6 flex flex-wrap gap-3 items-center">
++          <form method="GET" className="mt-8 flex flex-wrap gap-3 items-center">
+             <input
+               name="search"
+               defaultValue={search}
+               placeholder="Search articles…"
+               className="cc-input max-w-xs"
+             />
+-            {CATEGORIES.map(cat => (
++
++            {CATEGORIES.map((cat) => (
+               <button
+                 key={cat}
+                 type="submit"
+                 name="category"
+                 value={cat === 'All' ? '' : cat}
+-                className={`rounded-full px-4 py-1.5 text-xs font-bold tracking-wide border transition-colors
+-                  ${(cat === 'All' && !category) || category === cat
++                className={`rounded-full px-4 py-1.5 text-xs font-bold tracking-wide border transition-colors ${
++                  (cat === 'All' && !category) || category === cat
+                     ? 'bg-gold border-gold text-bg'
+-                    : 'border-border text-[#9A9490] hover:border-gold hover:text-gold'}`}
++                    : 'border-border text-[#9A9490] hover:border-gold hover:text-gold'
++                }`}
+               >
+                 {cat}
+               </button>
+@@ -65,19 +81,27 @@ export default async function BlogPage({ searchParams }: Props) {
+         </div>
+       </div>
+ 
+-      {/* Grid */}
+       <main className="max-w-7xl mx-auto px-6 py-12">
+         {posts.length > 0 ? (
+           <>
+-            <p className="text-[#6A6460] text-sm mb-6">{posts.length} article{posts.length !== 1 ? 's' : ''}</p>
++            <p className="text-[#6A6460] text-sm mb-6">
++              {posts.length} article{posts.length !== 1 ? 's' : ''}
++            </p>
++
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+-              {posts.map(post => <PostCard key={post.id} post={post} />)}
++              {posts.map((post) => (
++                <PostCard key={post.id} post={post} />
++              ))}
+             </div>
+           </>
+         ) : (
+           <div className="text-center py-24">
+-            <p className="font-serif text-2xl text-[#F0EDE8] mb-2">No articles found</p>
+-            <p className="text-[#9A9490] text-sm">Try a different search term or category.</p>
++            <p className="font-serif text-2xl text-[#F0EDE8] mb-2">
++              No articles found
++            </p>
++            <p className="text-[#9A9490] text-sm">
++              Try a different search term or category.
++            </p>
+           </div>
+         )}
+       </main>
+diff --git a/app/page.tsx b/app/page.tsx
+index 49fba96..754986d 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -7,13 +7,32 @@ import Link from 'next/link'
+ import type { Post } from '@/types'
+ 
+ const CAT_COLORS: Record<string, string> = {
+-  Investing: '#D4AF37', 'Personal Finance': '#4A9B8E',
+-  Credit: '#C4704A', Taxes: '#7B68D4',
+-  'Real Estate': '#5A8C5A', Retirement: '#C46A8A',
++  Investing: '#D4AF37',
++  'Personal Finance': '#4A9B8E',
++  Credit: '#C4704A',
++  Taxes: '#7B68D4',
++  'Real Estate': '#5A8C5A',
++  Retirement: '#C46A8A',
+ }
+-const CATEGORIES = ['Investing', 'Personal Finance', 'Credit', 'Taxes', 'Real Estate', 'Retirement']
+ 
+-export const revalidate = 60 // ISR: regenerate every 60s
++const CATEGORIES = [
++  'Investing',
++  'Personal Finance',
++  'Credit',
++  'Taxes',
++  'Real Estate',
++  'Retirement',
++]
++
++export const revalidate = 60
++
++function formatDate(date: string) {
++  return new Date(date).toLocaleDateString('en-US', {
++    year: 'numeric',
++    month: 'long',
++    day: 'numeric',
++  })
++}
+ 
+ export default async function HomePage() {
+   const supabase = createAdminClient()
+@@ -33,81 +52,221 @@ export default async function HomePage() {
+       <Navbar />
+       <Ticker />
+ 
+-      {/* ── HERO ─────────────────────────────────── */}
+       <section className="max-w-7xl mx-auto px-6 py-20 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+         <div>
+           <p className="text-xs font-bold tracking-[0.2em] uppercase text-gold mb-4">
+-            📈 Personal Finance &amp; Investing Intelligence
++            Independent Financial Education
+           </p>
++
+           <h1 className="font-serif text-5xl lg:text-6xl font-black leading-[1.08] mb-6">
+-            Master Your Money.<br />
+-            <em className="text-gold not-italic">Build Real Wealth.</em>
++            Clear financial guidance that feels credible before it feels clever.
+           </h1>
+-          <p className="text-[#9A9490] text-lg leading-relaxed mb-8 max-w-lg">
+-            CashClimb delivers clear, jargon-free financial insights — from investing fundamentals to advanced
+-            wealth strategies — written for people who take their financial future seriously.
++
++          <p className="text-[#9A9490] text-lg leading-relaxed mb-8 max-w-xl">
++            CashClimb helps readers make smarter decisions about investing,
++            debt, retirement, and long-term wealth building with practical,
++            plain-English guidance and transparent editorial standards.
+           </p>
+-          <div className="flex gap-4 flex-wrap">
+-            <Link href="/blog" className="cc-btn-primary inline-block">Read Articles</Link>
+-            <Link href="/admin" className="cc-btn-ghost inline-block">Write a Post</Link>
++
++          <div className="flex gap-4 flex-wrap mb-6">
++            <Link href="/blog" className="cc-btn-primary inline-block">
++              Explore Trusted Guides
++            </Link>
++            <Link href="/#standards" className="cc-btn-ghost inline-block">
++              See Editorial Standards
++            </Link>
++          </div>
++
++          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
++            {[
++              'No sponsored rankings',
++              'No ads or paywalls',
++              'Reviewed for clarity',
++              'Plain-English guidance',
++            ].map((item) => (
++              <div
++                key={item}
++                className="bg-bg-2 border border-border rounded-xl px-4 py-3 text-sm text-[#F0EDE8]"
++              >
++                {item}
++              </div>
++            ))}
+           </div>
+         </div>
+ 
+-        {/* Stats grid */}
+-        <div className="grid grid-cols-3 gap-4">
+-          {[
+-            { n: `${allPosts.length}+`, l: 'Articles' },
+-            { n: '6', l: 'Topics' },
+-            { n: '100%', l: 'Free' },
+-            { n: '$0', l: 'Ads / Paywalls' },
+-            { n: '5★', l: 'Reader Rating' },
+-            { n: '∞', l: 'Value' },
+-          ].map(s => (
+-            <div key={s.l} className="bg-bg-2 border border-border rounded-xl p-5">
+-              <div className="font-serif text-3xl font-black text-gold">{s.n}</div>
+-              <div className="text-[#9A9490] text-xs mt-1">{s.l}</div>
++        <div className="grid gap-4">
++          <div className="bg-bg-2 border border-border rounded-2xl p-8">
++            <div className="flex gap-2 mb-4 flex-wrap">
++              <span className="cat-badge bg-gold text-bg">Featured Guide</span>
++              {featured && (
++                <span
++                  className="cat-badge"
++                  style={{
++                    background: `${CAT_COLORS[featured.category]}22`,
++                    color: CAT_COLORS[featured.category],
++                  }}
++                >
++                  {featured.category}
++                </span>
++              )}
+             </div>
+-          ))}
++
++            {featured ? (
++              <>
++                <h2 className="font-serif text-3xl font-bold leading-snug text-[#F0EDE8] mb-4">
++                  {featured.title}
++                </h2>
++
++                <p className="text-[#9A9490] leading-relaxed mb-6">
++                  {featured.excerpt}
++                </p>
++
++                <div className="grid grid-cols-2 gap-3 text-sm mb-6">
++                  <div className="bg-bg border border-border rounded-xl p-4">
++                    <div className="text-[#6A6460] mb-1">Author</div>
++                    <div className="text-[#F0EDE8] font-semibold">
++                      {featured.author || 'CashClimb Editorial'}
++                    </div>
++                  </div>
++                  <div className="bg-bg border border-border rounded-xl p-4">
++                    <div className="text-[#6A6460] mb-1">Updated</div>
++                    <div className="text-[#F0EDE8] font-semibold">
++                      {formatDate(featured.updated_at || featured.created_at)}
++                    </div>
++                  </div>
++                  <div className="bg-bg border border-border rounded-xl p-4">
++                    <div className="text-[#6A6460] mb-1">Reading time</div>
++                    <div className="text-[#F0EDE8] font-semibold">
++                      {featured.read_time}
++                    </div>
++                  </div>
++                  <div className="bg-bg border border-border rounded-xl p-4">
++                    <div className="text-[#6A6460] mb-1">Review status</div>
++                    <div className="text-gold font-semibold">Reviewed</div>
++                  </div>
++                </div>
++
++                <Link
++                  href={`/blog/${featured.slug}`}
++                  className="text-gold font-bold text-sm inline-flex items-center gap-2 hover:text-gold-light transition-colors"
++                >
++                  Read Featured Guide →
++                </Link>
++              </>
++            ) : (
++              <>
++                <h2 className="font-serif text-3xl font-bold leading-snug text-[#F0EDE8] mb-4">
++                  Thoughtful personal finance guidance, built for trust.
++                </h2>
++                <p className="text-[#9A9490] leading-relaxed">
++                  Publish your first reviewed guide to highlight it here.
++                </p>
++              </>
++            )}
++          </div>
++
++          <div className="grid sm:grid-cols-3 gap-4">
++            {[
++              ['What readers need', 'Clear, useful explanations'],
++              ['What builds trust', 'Visible editorial standards'],
++              ['What makes it useful', 'Articles plus practical tools'],
++            ].map(([title, body]) => (
++              <div key={title} className="bg-bg-2 border border-border rounded-xl p-5">
++                <div className="text-xs font-bold tracking-widest uppercase text-gold mb-2">
++                  {title}
++                </div>
++                <div className="text-sm text-[#F0EDE8]">{body}</div>
++              </div>
++            ))}
++          </div>
++        </div>
++      </section>
++
++      <section className="border-y border-border bg-bg-2">
++        <div className="max-w-7xl mx-auto px-6 py-12">
++          <p className="text-xs font-bold tracking-widest uppercase text-gold mb-5">
++            How CashClimb Works
++          </p>
++          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
++            {[
++              'Every guide should answer a real financial decision',
++              'Content is updated when conditions materially change',
++              'No sponsored placements or paid rankings',
++              'Written for clarity, not complexity',
++            ].map((item) => (
++              <div
++                key={item}
++                className="border border-border rounded-xl p-5 text-sm text-[#9A9490] bg-bg"
++              >
++                {item}
++              </div>
++            ))}
++          </div>
+         </div>
+       </section>
+ 
+-      {/* ── FEATURED ─────────────────────────────── */}
+       {featured && (
+-        <section className="max-w-7xl mx-auto px-6 pb-16">
++        <section className="max-w-7xl mx-auto px-6 py-16">
+           <div className="flex items-center justify-between mb-6">
+-            <h2 className="font-serif text-2xl font-bold section-title">Featured Article</h2>
++            <h2 className="font-serif text-2xl font-bold section-title">
++              Featured Article
++            </h2>
+           </div>
++
+           <Link
+             href={`/blog/${featured.slug}`}
+-            className="grid grid-cols-1 md:grid-cols-2 bg-bg-2 border border-border rounded-2xl
+-                       overflow-hidden hover:border-gold transition-colors group"
++            className="grid grid-cols-1 md:grid-cols-2 bg-bg-2 border border-border rounded-2xl overflow-hidden hover:border-gold transition-colors group"
+           >
+-            {/* Cover / pattern */}
+             <div className="relative min-h-[280px] bg-gradient-to-br from-[#0D1A14] to-[#1A1000] flex items-center justify-center overflow-hidden">
+-              <div className="absolute inset-0 opacity-[0.08]"
+-                style={{ backgroundImage: 'repeating-linear-gradient(45deg,#D4AF37 0,#D4AF37 1px,transparent 0,transparent 50%)', backgroundSize: '14px 14px' }} />
++              <div
++                className="absolute inset-0 opacity-[0.08]"
++                style={{
++                  backgroundImage:
++                    'repeating-linear-gradient(45deg,#D4AF37 0,#D4AF37 1px,transparent 0,transparent 50%)',
++                  backgroundSize: '14px 14px',
++                }}
++              />
+               <span className="font-serif text-[8rem] font-black text-gold opacity-[0.12] leading-none select-none">
+                 {featured.title[0]}
+               </span>
+             </div>
+-            {/* Body */}
++
+             <div className="p-8 lg:p-12 flex flex-col justify-center">
+-              <div className="flex gap-2 mb-4">
++              <div className="flex gap-2 mb-4 flex-wrap">
+                 <span className="cat-badge bg-gold text-bg">Featured</span>
+-                <span className="cat-badge" style={{ background: `${CAT_COLORS[featured.category]}22`, color: CAT_COLORS[featured.category] }}>
++                <span
++                  className="cat-badge"
++                  style={{
++                    background: `${CAT_COLORS[featured.category]}22`,
++                    color: CAT_COLORS[featured.category],
++                  }}
++                >
+                   {featured.category}
+                 </span>
++                <span className="cat-badge bg-[#1A1A1A] text-[#F0EDE8]">
++                  Reviewed
++                </span>
+               </div>
++
+               <h3 className="font-serif text-2xl lg:text-3xl font-bold leading-snug text-[#F0EDE8] mb-4 group-hover:text-gold transition-colors">
+                 {featured.title}
+               </h3>
+-              <p className="text-[#9A9490] leading-relaxed mb-6">{featured.excerpt}</p>
+-              <div className="flex gap-4 text-sm flex-wrap">
+-                <span className="text-[#9A9490]">By {featured.author}</span>
+-                <span className="text-[#6A6460]">{featured.created_at?.slice(0, 10)}</span>
+-                <span className="text-gold font-semibold">{featured.read_time} read</span>
++
++              <p className="text-[#9A9490] leading-relaxed mb-6">
++                {featured.excerpt}
++              </p>
++
++              <div className="flex gap-4 text-sm flex-wrap mb-6">
++                <span className="text-[#9A9490]">
++                  By {featured.author || 'CashClimb Editorial'}
++                </span>
++                <span className="text-[#6A6460]">
++                  Updated {formatDate(featured.updated_at || featured.created_at)}
++                </span>
++                <span className="text-gold font-semibold">{featured.read_time}</span>
+               </div>
+-              <span className="mt-6 text-gold font-bold text-sm inline-flex items-center gap-2 group-hover:gap-3 transition-all">
++
++              <span className="text-gold font-bold text-sm inline-flex items-center gap-2 group-hover:gap-3 transition-all">
+                 Read Article →
+               </span>
+             </div>
+@@ -115,38 +274,286 @@ export default async function HomePage() {
+         </section>
+       )}
+ 
+-      {/* ── LATEST ARTICLES ──────────────────────── */}
+       {rest.length > 0 && (
+         <section className="max-w-7xl mx-auto px-6 pb-16">
+           <div className="flex items-center justify-between mb-6">
+-            <h2 className="font-serif text-2xl font-bold section-title">Latest Articles</h2>
+-            <Link href="/blog" className="text-gold text-sm font-semibold hover:text-gold-light transition-colors">
++            <h2 className="font-serif text-2xl font-bold section-title">
++              Latest Articles
++            </h2>
++            <Link
++              href="/blog"
++              className="text-gold text-sm font-semibold hover:text-gold-light transition-colors"
++            >
+               See All →
+             </Link>
+           </div>
++
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+-            {rest.slice(0, 3).map(post => <PostCard key={post.id} post={post} />)}
++            {rest.slice(0, 3).map((post) => (
++              <PostCard key={post.id} post={post} />
++            ))}
+           </div>
+         </section>
+       )}
+ 
+-      {/* ── TOPICS ───────────────────────────────── */}
+       <section className="max-w-7xl mx-auto px-6 pb-20">
+-        <h2 className="font-serif text-2xl font-bold section-title mb-6">Browse by Topic</h2>
+-        <div className="flex flex-wrap gap-3">
+-          {CATEGORIES.map(cat => (
++        <h2 className="font-serif text-2xl font-bold section-title mb-6">
++          Browse by Topic
++        </h2>
++
++        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
++          {CATEGORIES.map((cat) => (
+             <Link
+               key={cat}
+               href={`/blog?category=${encodeURIComponent(cat)}`}
+-              className="border border-border rounded-full px-5 py-2.5 text-sm font-semibold
+-                         text-[#9A9490] hover:border-gold hover:text-gold transition-colors"
++              className="border border-border rounded-2xl p-5 bg-bg-2 hover:border-gold transition-colors"
+             >
+-              {cat}
++              <div className="font-serif text-xl font-bold text-[#F0EDE8] mb-2">
++                {cat}
++              </div>
++              <div className="text-sm text-[#9A9490]">
++                Explore practical guides and commentary in {cat.toLowerCase()}.
++              </div>
+             </Link>
+           ))}
+         </div>
+       </section>
+ 
++      <section id="standards" className="border-y border-border bg-bg-2">
++        <div className="max-w-7xl mx-auto px-6 py-20">
++          <p className="text-xs font-bold tracking-widest uppercase text-gold mb-4">
++            Editorial Standards
++          </p>
++          <h2 className="font-serif text-4xl font-black mb-6">
++            Authority comes from process, not just a polished headline.
++          </h2>
++          <p className="text-[#9A9490] max-w-3xl leading-relaxed mb-10">
++            A trustworthy finance site should show how content is created,
++            reviewed, updated, and framed for readers making real money decisions.
++          </p>
++
++          <div className="grid md:grid-cols-3 gap-6 mb-8">
++            <div className="bg-bg border border-border rounded-2xl p-6">
++              <h3 className="font-serif text-xl font-bold mb-3 text-[#F0EDE8]">
++                How we publish
++              </h3>
++              <p className="text-sm text-[#9A9490] leading-relaxed">
++                Every guide should answer a real financial question and avoid
++                hype, fear, and vague promises.
++              </p>
++            </div>
++
++            <div className="bg-bg border border-border rounded-2xl p-6">
++              <h3 className="font-serif text-xl font-bold mb-3 text-[#F0EDE8]">
++                How we review
++              </h3>
++              <p className="text-sm text-[#9A9490] leading-relaxed">
++                Articles should show the author, last updated date, review
++                status, and when the guidance may depend on changing conditions.
++              </p>
++            </div>
++
++            <div className="bg-bg border border-border rounded-2xl p-6">
++              <h3 className="font-serif text-xl font-bold mb-3 text-[#F0EDE8]">
++                How we earn trust
++              </h3>
++              <p className="text-sm text-[#9A9490] leading-relaxed">
++                No paid rankings, no sponsored placements, and no disguised
++                incentives presented as advice.
++              </p>
++            </div>
++          </div>
++
++          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
++            {[
++              'Author bio module',
++              'Last updated and review date',
++              'Clear educational disclaimer',
++              'Topic-specific trust signals',
++              'Better article summaries',
++              'Reader-first explanations',
++              'No inflated claims',
++              'Practical tools and calculators',
++            ].map((item) => (
++              <div
++                key={item}
++                className="border border-border rounded-xl p-4 text-sm text-[#9A9490] bg-bg"
++              >
++                {item}
++              </div>
++            ))}
++          </div>
++        </div>
++      </section>
++
++      <section className="max-w-7xl mx-auto px-6 py-20">
++        <p className="text-xs font-bold tracking-widest uppercase text-gold mb-4">
++          Helpful Tools
++        </p>
++        <h2 className="font-serif text-4xl font-black mb-6">
++          Useful tools make the site feel like a financial resource, not just a blog.
++        </h2>
++        <p className="text-[#9A9490] max-w-3xl leading-relaxed mb-10">
++          These can start as simple landing pages or coming-soon blocks. Their
++          presence immediately makes the brand feel more useful and more serious.
++        </p>
++
++        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
++          {[
++            {
++              title: 'Compound Growth Calculator',
++              text: 'Show how time, return assumptions, and ongoing contributions affect long-term wealth.',
++            },
++            {
++              title: 'Debt Payoff Planner',
++              text: 'Compare repayment strategies and make interest costs easier to understand.',
++            },
++            {
++              title: 'ETF Fee Impact Tool',
++              text: 'Show how fees affect portfolio value over time.',
++            },
++            {
++              title: 'Emergency Fund Target',
++              text: 'Help readers estimate a more practical cash buffer.',
++            },
++          ].map((tool) => (
++            <div
++              key={tool.title}
++              className="bg-bg-2 border border-border rounded-2xl p-6 hover:border-gold transition-colors"
++            >
++              <h3 className="font-serif text-xl font-bold mb-3 text-[#F0EDE8]">
++                {tool.title}
++              </h3>
++              <p className="text-sm text-[#9A9490] leading-relaxed">
++                {tool.text}
++              </p>
++            </div>
++          ))}
++        </div>
++      </section>
++
++      <section className="border-y border-border bg-bg-2">
++        <div className="max-w-7xl mx-auto px-6 py-20">
++          <p className="text-xs font-bold tracking-widest uppercase text-gold mb-4">
++            People Behind the Content
++          </p>
++          <h2 className="font-serif text-4xl font-black mb-6">
++            Show the humans responsible for the guidance.
++          </h2>
++          <p className="text-[#9A9490] max-w-3xl leading-relaxed mb-10">
++            Even if you start with one editorial identity, this section improves
++            credibility far more than anonymous publishing.
++          </p>
++
++          <div className="grid md:grid-cols-3 gap-6">
++            {[
++              {
++                name: 'CashClimb Editorial',
++                role: 'Investing & Personal Finance',
++                bio: 'Focused on practical investing, debt, and wealth-building guidance written for clarity.',
++              },
++              {
++                name: 'Market & Strategy',
++                role: 'Wealth Building',
++                bio: 'Covers long-term investing, portfolio thinking, and financial decision-making frameworks.',
++              },
++              {
++                name: 'Reader-Focused Guides',
++                role: 'Money Basics',
++                bio: 'Explains financial topics in plain English so readers can make better decisions with less noise.',
++              },
++            ].map((person) => (
++              <div
++                key={person.name}
++                className="bg-bg border border-border rounded-2xl p-6"
++              >
++                <div className="font-serif text-2xl font-bold text-[#F0EDE8] mb-2">
++                  {person.name}
++                </div>
++                <div className="text-sm text-gold font-semibold mb-4">
++                  {person.role}
++                </div>
++                <p className="text-sm text-[#9A9490] leading-relaxed">
++                  {person.bio}
++                </p>
++              </div>
++            ))}
++          </div>
++        </div>
++      </section>
++
++      <section className="max-w-7xl mx-auto px-6 py-20">
++        <div className="grid lg:grid-cols-2 gap-10 items-start">
++          <div>
++            <p className="text-xs font-bold tracking-widest uppercase text-gold mb-4">
++              Newsletter
++            </p>
++            <h2 className="font-serif text-4xl font-black mb-6">
++              Build a newsletter people actually trust.
++            </h2>
++            <p className="text-[#9A9490] leading-relaxed max-w-xl">
++              A stronger signup message is specific, restrained, and useful. It
++              should sound like a reader benefit, not a growth hack.
++            </p>
++          </div>
++
++          <div className="bg-bg-2 border border-border rounded-2xl p-8">
++            <h3 className="font-serif text-2xl font-bold mb-4 text-[#F0EDE8]">
++              Get smarter about money, one email at a time.
++            </h3>
++            <p className="text-[#9A9490] text-sm leading-relaxed mb-4">
++              Weekly investing and personal finance insights, plus new guides
++              and tools when they are actually worth your time.
++            </p>
++            <p className="text-xs text-[#6A6460] leading-relaxed">
++              No spam. No paid promotions disguised as advice.
++            </p>
++          </div>
++        </div>
++      </section>
++
++      <section id="faq" className="max-w-7xl mx-auto px-6 pb-20">
++        <p className="text-xs font-bold tracking-widest uppercase text-gold mb-4">
++          Reader FAQ
++        </p>
++        <h2 className="font-serif text-4xl font-black mb-10">
++          A stronger FAQ removes friction and reinforces credibility.
++        </h2>
++
++        <div className="grid gap-4">
++          {[
++            {
++              q: 'Is CashClimb financial advice?',
++              a: 'No. CashClimb provides educational content and general financial commentary, not personalised advice.',
++            },
++            {
++              q: 'How does CashClimb make money?',
++              a: 'If you have no sponsorships, paid rankings, or affiliate incentives, say that clearly. If that changes later, disclose it plainly.',
++            },
++            {
++              q: 'Who writes and reviews the articles?',
++              a: 'Each article should identify the author, update date, and review status so readers can judge freshness and relevance.',
++            },
++            {
++              q: 'Why should readers trust the content?',
++              a: 'Because the site explains how content is written, what its limits are, and avoids hype or hidden incentives.',
++            },
++          ].map((item) => (
++            <div
++              key={item.q}
++              className="bg-bg-2 border border-border rounded-2xl p-6"
++            >
++              <h3 className="font-serif text-xl font-bold text-[#F0EDE8] mb-3">
++                {item.q}
++              </h3>
++              <p className="text-sm text-[#9A9490] leading-relaxed">
++                {item.a}
++              </p>
++            </div>
++          ))}
++        </div>
++      </section>
++
+       <Footer />
+     </>
+   )
+diff --git a/components/Footer.tsx b/components/Footer.tsx
+index bb2181e..e2bef50 100644
+--- a/components/Footer.tsx
++++ b/components/Footer.tsx
+@@ -1,27 +1,35 @@
+ import Link from 'next/link'
+ 
+-const categories = ['Investing', 'Personal Finance', 'Credit', 'Taxes', 'Real Estate', 'Retirement']
++const categories = [
++  'Investing',
++  'Personal Finance',
++  'Credit',
++  'Taxes',
++  'Real Estate',
++  'Retirement',
++]
+ 
+ export default function Footer() {
+   return (
+     <footer className="bg-bg-2 border-t border-border mt-20">
+       <div className="max-w-7xl mx-auto px-6 py-16">
+-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+-          {/* Brand */}
++        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+           <div>
+             <div className="font-serif text-xl font-bold mb-3">
+               Cash<span className="text-gold">Climb</span>
+             </div>
+             <p className="text-[#9A9490] text-sm leading-relaxed max-w-xs">
+-              Independent financial commentary for serious investors. No ads, no paywalls, no sponsored content. Just clear thinking about money.
++              Practical personal finance and investing guidance built to be
++              clear, useful, and trustworthy.
+             </p>
+           </div>
+ 
+-          {/* Topics */}
+           <div>
+-            <div className="text-xs font-bold tracking-widest uppercase text-gold mb-4">Topics</div>
++            <div className="text-xs font-bold tracking-widest uppercase text-gold mb-4">
++              Topics
++            </div>
+             <ul className="space-y-2">
+-              {categories.map(cat => (
++              {categories.map((cat) => (
+                 <li key={cat}>
+                   <Link
+                     href={`/blog?category=${encodeURIComponent(cat)}`}
+@@ -34,18 +42,45 @@ export default function Footer() {
+             </ul>
+           </div>
+ 
+-          {/* Site */}
+           <div>
+-            <div className="text-xs font-bold tracking-widest uppercase text-gold mb-4">Site</div>
++            <div className="text-xs font-bold tracking-widest uppercase text-gold mb-4">
++              Site
++            </div>
+             <ul className="space-y-2">
+               {[
+                 { href: '/', label: 'Home' },
+                 { href: '/blog', label: 'All Articles' },
++                { href: '/#faq', label: 'FAQ' },
+                 { href: '/admin', label: 'Write a Post' },
+-              ].map(l => (
+-                <li key={l.href}>
+-                  <Link href={l.href} className="text-sm text-[#9A9490] hover:text-gold transition-colors">
+-                    {l.label}
++              ].map((link) => (
++                <li key={link.href}>
++                  <Link
++                    href={link.href}
++                    className="text-sm text-[#9A9490] hover:text-gold transition-colors"
++                  >
++                    {link.label}
++                  </Link>
++                </li>
++              ))}
++            </ul>
++          </div>
++
++          <div>
++            <div className="text-xs font-bold tracking-widest uppercase text-gold mb-4">
++              Trust
++            </div>
++            <ul className="space-y-2">
++              {[
++                { href: '/#standards', label: 'Editorial Standards' },
++                { href: '/#faq', label: 'Reader FAQ' },
++                { href: '/blog', label: 'Reviewed Articles' },
++              ].map((link) => (
++                <li key={link.href}>
++                  <Link
++                    href={link.href}
++                    className="text-sm text-[#9A9490] hover:text-gold transition-colors"
++                  >
++                    {link.label}
+                   </Link>
+                 </li>
+               ))}
+@@ -58,7 +93,9 @@ export default function Footer() {
+             © {new Date().getFullYear()} CashClimb. All rights reserved.
+           </span>
+           <span className="text-[#6A6460] text-xs max-w-md leading-relaxed">
+-            Content is for informational purposes only and does not constitute financial advice. Investing involves risk including possible loss of principal.
++            Content is for informational and educational purposes only and does
++            not constitute financial advice. Investing involves risk, including
++            possible loss of principal.
+           </span>
+         </div>
+       </div>
+diff --git a/components/Navbar.tsx b/components/Navbar.tsx
+index 96d11cf..c598e6e 100644
+--- a/components/Navbar.tsx
++++ b/components/Navbar.tsx
+@@ -1,4 +1,5 @@
+ 'use client'
++
+ import Link from 'next/link'
+ import { usePathname } from 'next/navigation'
+ import { useState } from 'react'
+@@ -10,15 +11,18 @@ export default function Navbar() {
+   const links = [
+     { href: '/', label: 'Home' },
+     { href: '/blog', label: 'Articles' },
++    { href: '/#standards', label: 'Standards' },
++    { href: '/#faq', label: 'FAQ' },
+   ]
+ 
+   return (
+     <nav className="sticky top-0 z-50 bg-bg/95 backdrop-blur-md border-b border-border">
+       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+-        {/* Logo */}
+         <Link href="/" className="flex items-center gap-2.5 group">
+-          <div className="w-8 h-8 bg-gold flex items-center justify-center text-bg font-black text-sm"
+-               style={{ clipPath: 'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' }}>
++          <div
++            className="w-8 h-8 bg-gold flex items-center justify-center text-bg font-black text-sm"
++            style={{ clipPath: 'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' }}
++          >
+             C
+           </div>
+           <span className="font-serif text-xl font-bold tracking-tight">
+@@ -26,57 +30,55 @@ export default function Navbar() {
+           </span>
+         </Link>
+ 
+-        {/* Desktop links */}
+         <div className="hidden md:flex items-center gap-8">
+-          {links.map(l => (
++          {links.map((link) => (
+             <Link
+-              key={l.href}
+-              href={l.href}
+-              className={`text-sm font-medium tracking-wide transition-colors
+-                ${pathname === l.href ? 'text-gold' : 'text-[#9A9490] hover:text-gold'}`}
++              key={link.href}
++              href={link.href}
++              className={`text-sm font-medium tracking-wide transition-colors ${
++                pathname === link.href ? 'text-gold' : 'text-[#9A9490] hover:text-gold'
++              }`}
+             >
+-              {l.label}
++              {link.label}
+             </Link>
+           ))}
++
+           <Link
+-            href="/admin"
+-            className="border border-gold text-gold text-xs font-bold tracking-widest uppercase
+-                       px-4 py-2 rounded transition-all hover:bg-gold hover:text-bg"
++            href="/blog"
++            className="border border-gold text-gold text-xs font-bold tracking-widest uppercase px-4 py-2 rounded transition-all hover:bg-gold hover:text-bg"
+           >
+-            + Write
++            Read Guides
+           </Link>
+         </div>
+ 
+-        {/* Mobile toggle */}
+         <button
+           className="md:hidden text-[#F0EDE8] text-2xl"
+-          onClick={() => setOpen(o => !o)}
++          onClick={() => setOpen((o) => !o)}
+           aria-label="Toggle menu"
+         >
+           {open ? '✕' : '☰'}
+         </button>
+       </div>
+ 
+-      {/* Mobile menu */}
+       {open && (
+         <div className="md:hidden bg-bg-2 border-b border-border px-6 py-4 flex flex-col gap-4">
+-          {links.map(l => (
++          {links.map((link) => (
+             <Link
+-              key={l.href}
+-              href={l.href}
++              key={link.href}
++              href={link.href}
+               onClick={() => setOpen(false)}
+               className="text-sm font-medium text-[#9A9490] hover:text-gold transition-colors"
+             >
+-              {l.label}
++              {link.label}
+             </Link>
+           ))}
++
+           <Link
+-            href="/admin"
++            href="/blog"
+             onClick={() => setOpen(false)}
+-            className="text-xs font-bold tracking-widest uppercase text-gold border border-gold
+-                       rounded px-4 py-2 text-center hover:bg-gold hover:text-bg transition-all"
++            className="text-xs font-bold tracking-widest uppercase text-gold border border-gold rounded px-4 py-2 text-center hover:bg-gold hover:text-bg transition-all"
+           >
+-            + Write Post
++            Read Guides
+           </Link>
+         </div>
+       )}
+diff --git a/components/PostCard.tsx b/components/PostCard.tsx
+index 54cad48..b154c86 100644
+--- a/components/PostCard.tsx
++++ b/components/PostCard.tsx
+@@ -3,20 +3,47 @@ import Image from 'next/image'
+ import type { Post } from '@/types'
+ 
+ const CAT_COLORS: Record<string, string> = {
+-  Investing:        '#D4AF37',
++  Investing: '#D4AF37',
+   'Personal Finance': '#4A9B8E',
+-  Credit:           '#C4704A',
+-  Taxes:            '#7B68D4',
+-  'Real Estate':    '#5A8C5A',
+-  Retirement:       '#C46A8A',
++  Credit: '#C4704A',
++  Taxes: '#7B68D4',
++  'Real Estate': '#5A8C5A',
++  Retirement: '#C46A8A',
++}
++
++function formatDate(date: string) {
++  return new Date(date).toLocaleDateString('en-US', {
++    year: 'numeric',
++    month: 'short',
++    day: 'numeric',
++  })
++}
++
++function getUseCase(category: string) {
++  switch (category) {
++    case 'Investing':
++      return 'Best for: Beginner investors'
++    case 'Personal Finance':
++      return 'Best for: Money management basics'
++    case 'Credit':
++      return 'Best for: Borrowing and credit decisions'
++    case 'Taxes':
++      return 'Best for: Tax-aware planning'
++    case 'Real Estate':
++      return 'Best for: Property-related decisions'
++    case 'Retirement':
++      return 'Best for: Long-term planning'
++    default:
++      return 'Best for: Practical financial decisions'
++  }
+ }
+ 
+ export default function PostCard({ post }: { post: Post }) {
+   const color = CAT_COLORS[post.category] ?? '#888'
++  const author = post.author || 'CashClimb Editorial'
+ 
+   return (
+     <Link href={`/blog/${post.slug}`} className="post-card flex flex-col group">
+-      {/* Cover image or pattern */}
+       <div className="h-44 relative overflow-hidden bg-gradient-to-br from-[#0D1A14] to-[#1A1000] flex-shrink-0">
+         {post.cover_url ? (
+           <Image
+@@ -30,7 +57,8 @@ export default function PostCard({ post }: { post: Post }) {
+             <div
+               className="absolute inset-0 opacity-[0.07]"
+               style={{
+-                backgroundImage: 'repeating-linear-gradient(45deg,#D4AF37 0,#D4AF37 1px,transparent 0,transparent 50%)',
++                backgroundImage:
++                  'repeating-linear-gradient(45deg,#D4AF37 0,#D4AF37 1px,transparent 0,transparent 50%)',
+                 backgroundSize: '10px 10px',
+               }}
+             />
+@@ -41,18 +69,21 @@ export default function PostCard({ post }: { post: Post }) {
+         )}
+       </div>
+ 
+-      {/* Body */}
+       <div className="p-5 flex flex-col flex-1">
+-        <div className="flex items-center gap-2 mb-3">
+-          <span
+-            className="cat-badge"
+-            style={{ background: `${color}22`, color }}
+-          >
++        <div className="flex items-center gap-2 mb-3 flex-wrap">
++          <span className="cat-badge" style={{ background: `${color}22`, color }}>
+             {post.category}
+           </span>
++          <span className="cat-badge bg-[#1A1A1A] text-[#F0EDE8]">
++            Reviewed
++          </span>
+         </div>
+ 
+-        <h3 className="font-serif text-lg font-bold leading-snug mb-2 text-[#F0EDE8] flex-1">
++        <div className="text-xs text-[#6A6460] mb-3">
++          Updated {formatDate(post.updated_at || post.created_at)} • {post.read_time}
++        </div>
++
++        <h3 className="font-serif text-lg font-bold leading-snug mb-2 text-[#F0EDE8]">
+           {post.title}
+         </h3>
+ 
+@@ -60,9 +91,13 @@ export default function PostCard({ post }: { post: Post }) {
+           {post.excerpt}
+         </p>
+ 
+-        <div className="flex justify-between items-center pt-4 border-t border-border text-xs">
+-          <span className="text-[#6A6460] font-medium">{post.author}</span>
+-          <span className="text-gold font-semibold">{post.read_time} read</span>
++        <div className="text-xs text-gold font-semibold mb-4">
++          {getUseCase(post.category)}
++        </div>
++
++        <div className="mt-auto pt-4 border-t border-border flex justify-between items-center gap-3">
++          <span className="text-xs text-[#9A9490]">Author: {author}</span>
++          <span className="text-gold font-semibold text-xs">Read Guide →</span>
+         </div>
+       </div>
+     </Link>
+diff --git a/components/Ticker.tsx b/components/Ticker.tsx
+index f98a365..cb73393 100644
+--- a/components/Ticker.tsx
++++ b/components/Ticker.tsx
+@@ -1,16 +1,16 @@
+ const TICKERS = [
+-  { name: 'S&P 500', val: '5,218.19', change: '+0.42%', up: true },
+-  { name: 'NASDAQ',  val: '16,340.87', change: '-0.18%', up: false },
+-  { name: 'DOW',     val: '38,996.40', change: '+0.31%', up: true },
+-  { name: '10Y Treasury', val: '4.31%', change: '-0.05%', up: false },
+-  { name: 'Gold',    val: '$2,181.20', change: '+0.67%', up: true },
+-  { name: 'BTC/USD', val: '$68,440',  change: '+2.14%', up: true },
+-  { name: 'EUR/USD', val: '1.0842',   change: '-0.09%', up: false },
+-  { name: 'Oil (WTI)', val: '$81.14', change: '+0.55%', up: true },
++  { name: 'Reader-first', val: 'Guidance', change: 'No hype', up: true },
++  { name: 'Coverage', val: 'Investing', change: 'Debt', up: true },
++  { name: 'Coverage', val: 'Retirement', change: 'Credit', up: true },
++  { name: 'Coverage', val: 'Taxes', change: 'Property', up: true },
++  { name: 'Publishing', val: 'Reviewed', change: 'Updated', up: true },
++  { name: 'Monetization', val: 'No sponsored rankings', change: 'Clear disclosures', up: true },
++  { name: 'Style', val: 'Plain English', change: 'Practical use cases', up: true },
+ ]
+ 
+ export default function Ticker() {
+   const doubled = [...TICKERS, ...TICKERS]
++
+   return (
+     <div className="bg-bg-3 border-y border-border py-2 overflow-hidden">
+       <div className="ticker-animate flex gap-12 whitespace-nowrap">
+@@ -18,9 +18,7 @@ export default function Ticker() {
+           <span key={i} className="inline-flex items-center gap-2 text-xs">
+             <span className="text-[#9A9490] font-medium">{t.name}</span>
+             <span className="text-[#F0EDE8]">{t.val}</span>
+-            <span className={t.up ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
+-              {t.change}
+-            </span>
++            <span className="text-gold font-semibold">{t.change}</span>
+           </span>
+         ))}
+       </div>

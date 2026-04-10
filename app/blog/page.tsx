@@ -4,7 +4,15 @@ import Footer from '@/components/Footer'
 import PostCard from '@/components/PostCard'
 import type { Post } from '@/types'
 
-const CATEGORIES = ['All', 'Investing', 'Personal Finance', 'Credit', 'Taxes', 'Real Estate', 'Retirement']
+const CATEGORIES = [
+  'All',
+  'Investing',
+  'Personal Finance',
+  'Credit',
+  'Taxes',
+  'Real Estate',
+  'Retirement',
+]
 
 export const revalidate = 60
 
@@ -15,7 +23,7 @@ interface Props {
 export default async function BlogPage({ searchParams }: Props) {
   const supabase = createAdminClient()
   const category = searchParams.category
-  const search   = searchParams.search
+  const search = searchParams.search
 
   let query = supabase
     .from('posts')
@@ -33,30 +41,38 @@ export default async function BlogPage({ searchParams }: Props) {
     <>
       <Navbar />
 
-      {/* Header */}
       <div className="bg-bg-2 border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <h1 className="font-serif text-4xl font-black mb-2">All Articles</h1>
-          <p className="text-[#9A9490]">Practical financial insights to help you invest smarter and build lasting wealth.</p>
+        <div className="max-w-7xl mx-auto px-6 py-14">
+          <p className="text-xs font-bold tracking-widest uppercase text-gold mb-3">
+            Article Library
+          </p>
+          <h1 className="font-serif text-4xl font-black mb-3">
+            Practical financial guidance for real-world decisions.
+          </h1>
+          <p className="text-[#9A9490] max-w-2xl leading-relaxed">
+            Explore clear, plain-English articles on investing, debt,
+            retirement, credit, property, and personal finance.
+          </p>
 
-          {/* Search + filters — client-side form */}
-          <form method="GET" className="mt-6 flex flex-wrap gap-3 items-center">
+          <form method="GET" className="mt-8 flex flex-wrap gap-3 items-center">
             <input
               name="search"
               defaultValue={search}
               placeholder="Search articles…"
               className="cc-input max-w-xs"
             />
-            {CATEGORIES.map(cat => (
+
+            {CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 type="submit"
                 name="category"
                 value={cat === 'All' ? '' : cat}
-                className={`rounded-full px-4 py-1.5 text-xs font-bold tracking-wide border transition-colors
-                  ${(cat === 'All' && !category) || category === cat
+                className={`rounded-full px-4 py-1.5 text-xs font-bold tracking-wide border transition-colors ${
+                  (cat === 'All' && !category) || category === cat
                     ? 'bg-gold border-gold text-bg'
-                    : 'border-border text-[#9A9490] hover:border-gold hover:text-gold'}`}
+                    : 'border-border text-[#9A9490] hover:border-gold hover:text-gold'
+                }`}
               >
                 {cat}
               </button>
@@ -65,19 +81,27 @@ export default async function BlogPage({ searchParams }: Props) {
         </div>
       </div>
 
-      {/* Grid */}
       <main className="max-w-7xl mx-auto px-6 py-12">
         {posts.length > 0 ? (
           <>
-            <p className="text-[#6A6460] text-sm mb-6">{posts.length} article{posts.length !== 1 ? 's' : ''}</p>
+            <p className="text-[#6A6460] text-sm mb-6">
+              {posts.length} article{posts.length !== 1 ? 's' : ''}
+            </p>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {posts.map(post => <PostCard key={post.id} post={post} />)}
+              {posts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
             </div>
           </>
         ) : (
           <div className="text-center py-24">
-            <p className="font-serif text-2xl text-[#F0EDE8] mb-2">No articles found</p>
-            <p className="text-[#9A9490] text-sm">Try a different search term or category.</p>
+            <p className="font-serif text-2xl text-[#F0EDE8] mb-2">
+              No articles found
+            </p>
+            <p className="text-[#9A9490] text-sm">
+              Try a different search term or category.
+            </p>
           </div>
         )}
       </main>
