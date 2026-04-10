@@ -1,20 +1,34 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { useCookies } from '@/lib/use-cookies'
+
+function getAdminKey(): string {
+  if (typeof window === 'undefined') return ''
+  return sessionStorage.getItem('cc-admin-key') ?? ''
+}
 
 export default function DeletePostButton({ postId }: { postId: string }) {
-  const router   = useRouter()
-  const adminKey = useCookies('cc-admin-token')
+  const router = useRouter()
 
   async function handleDelete() {
     if (!confirm('Delete this post permanently?')) return
+
+    const adminKey = getAdminKey()
+
+    if (!adminKey) {
+      toast.error('Session expired. Please log in again.')
+      window.location.href = '/admin/login'
+      return
+    }
+
     try {
       const res = await fetch(`/api/posts/${postId}`, {
         method: 'DELETE',
         headers: { 'x-admin-key': adminKey },
       })
+
       if (!res.ok) throw new Error()
+
       toast.success('Post deleted.')
       router.refresh()
     } catch {
@@ -23,8 +37,10 @@ export default function DeletePostButton({ postId }: { postId: string }) {
   }
 
   return (
-    <button onClick={handleDelete}
-      className="text-xs text-red-400 hover:text-red-300 transition-colors">
+    <button
+      onClick={handleDelete}
+      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+    >
       Delete
     </button>
   )
