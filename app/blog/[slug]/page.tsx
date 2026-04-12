@@ -1,7 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
@@ -28,20 +27,32 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = createAdminClient()
+
   const { data } = await supabase
     .from('posts')
-    .select('title, excerpt, cover_url')
+    .select('title, excerpt, cover_url, seo_title, seo_description, published')
     .eq('slug', params.slug)
-    .single()
+    .eq('published', true)
+    .maybeSingle()
 
   if (!data) return {}
 
+  const metaTitle = data.seo_title || data.title
+  const metaDescription = data.seo_description || data.excerpt
+
   return {
-    title: data.title,
-    description: data.excerpt,
+    title: metaTitle,
+    description: metaDescription,
     openGraph: {
-      title: data.title,
-      description: data.excerpt,
+      title: metaTitle,
+      description: metaDescription,
+      images: data.cover_url ? [data.cover_url] : [],
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: metaTitle,
+      description: metaDescription,
       images: data.cover_url ? [data.cover_url] : [],
     },
   }
@@ -59,8 +70,8 @@ export async function generateStaticParams() {
 
 function cleanPostBody(html: string): string {
   return html
-    .replace(/rel="noopener noreferrer nofollow"/g, 'target="_blank"')
-    .replace(/rel="noreferrer nofollow"/g, 'target="_blank"')
+    .replace(/rel="noopener noreferrer nofollow"/g, 'target="_blank" rel="noopener noreferrer"')
+    .replace(/rel="noreferrer nofollow"/g, 'target="_blank" rel="noopener noreferrer"')
     .replace(/rel="nofollow"/g, '')
 }
 
@@ -92,10 +103,12 @@ export default async function PostPage({ params }: Props) {
   if (!postRes.data) notFound()
 
   const post: Post = postRes.data
-  const comments: Comment[] = commentsRes.data ?? []
   const color = CAT_COLORS[post.category] ?? '#888'
 
-  // ✅ NEW AUTHOR SYSTEM
+  const comments: Comment[] = (commentsRes.data ?? []).filter(
+    (comment: any) => comment.post_id === post.id
+  )
+
   const author = getAuthorByName(post.author)
 
   const { data: related } = await supabase
@@ -104,6 +117,7 @@ export default async function PostPage({ params }: Props) {
     .eq('published', true)
     .eq('category', post.category)
     .neq('id', post.id)
+    .order('created_at', { ascending: false })
     .limit(3)
 
   return (
@@ -136,7 +150,12 @@ export default async function PostPage({ params }: Props) {
             {post.title}
           </h1>
 
-          {/* ✅ UPDATED AUTHOR CARD */}
+          {post.excerpt && (
+            <p className="text-lg text-[#B8B1AC] leading-relaxed mb-8">
+              {post.excerpt}
+            </p>
+          )}
+
           <div className="bg-bg-2 border border-border rounded-2xl p-6 mb-8">
             <div className="flex items-start gap-4">
               <div className="w-14 h-14 rounded-full border border-border bg-[#111214] text-[#F0EDE8] flex items-center justify-center text-sm font-bold tracking-wide flex-shrink-0">
@@ -190,16 +209,15 @@ export default async function PostPage({ params }: Props) {
 
         <div className="max-w-3xl mx-auto px-6">
           {post.cover_url ? (
-            <div className="relative h-72 lg:h-96 rounded-2xl overflow-hidden">
-              <Image
+            <div className="mb-10 overflow-hidden rounded-2xl border border-border bg-bg-2">
+              <img
                 src={post.cover_url}
                 alt={post.title}
-                fill
-                className="object-cover"
+                className="block w-full h-auto max-h-[520px] object-cover"
               />
             </div>
           ) : (
-            <div className="h-64 rounded-2xl overflow-hidden bg-gradient-to-br from-[#0D1A14] to-[#1A1000] relative flex items-center justify-center">
+            <div className="mb-10 h-64 rounded-2xl overflow-hidden bg-gradient-to-br from-[#0D1A14] to-[#1A1000] relative flex items-center justify-center">
               <div
                 className="absolute inset-0 opacity-[0.08]"
                 style={{
@@ -227,12 +245,11 @@ export default async function PostPage({ params }: Props) {
             </p>
           </div>
 
-          <div
+          <article
             className="prose-cashclimb"
             dangerouslySetInnerHTML={{ __html: cleanPostBody(post.body) }}
           />
 
-          {/* ✅ AUTHOR BOX (BOTTOM) */}
           <div className="mt-10 bg-bg-2 border border-border rounded-2xl p-6">
             <div className="flex items-start gap-4">
               <div className="w-14 h-14 rounded-full border border-border bg-[#111214] text-[#F0EDE8] flex items-center justify-center text-sm font-bold tracking-wide flex-shrink-0">
