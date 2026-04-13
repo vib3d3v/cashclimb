@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase-server'
 import type { Category } from '@/types'
+import CoverImageField from '@/components/admin/CoverImageField'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -231,30 +232,7 @@ export default async function EditPostPage({ params }: PageProps) {
               />
             </div>
 
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-[#6A6460]">
-                Cover Image URL
-              </label>
-              <input
-                name="cover_url"
-                defaultValue={post.cover_url ?? ''}
-                className="w-full rounded-lg border border-border bg-bg px-4 py-3 text-sm outline-none focus:border-gold"
-                placeholder="https://..."
-              />
-            </div>
-
-            {post.cover_url && (
-              <div className="md:col-span-2">
-                <p className="mb-2 block text-xs font-bold uppercase tracking-widest text-[#6A6460]">
-                  Cover Preview
-                </p>
-                <img
-                  src={post.cover_url}
-                  alt={post.title ?? 'Cover image'}
-                  className="max-h-[340px] w-full rounded-xl border border-border object-cover"
-                />
-              </div>
-            )}
+            <CoverImageField initialUrl={post.cover_url ?? ''} title="Cover image" />
           </div>
         </section>
 
