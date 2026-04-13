@@ -74,21 +74,6 @@ const CATEGORY_ROTATION: Category[] = [
   'Real Estate',
 ]
 
-const DEFAULT_STOCK_COVERS: Record<Category, string> = {
-  'Personal Finance':
-    'https://images.pexels.com/photos/5942583/pexels-photo-5942583.jpeg?cs=srgb&dl=pexels-karola-g-5942583.jpg&fm=jpg',
-  Credit:
-    'https://images.pexels.com/photos/6609234/pexels-photo-6609234.jpeg?cs=srgb&dl=pexels-mikhail-nilov-6609234.jpg&fm=jpg',
-  Retirement:
-    'https://images.pexels.com/photos/5591267/pexels-photo-5591267.jpeg?cs=srgb&dl=pexels-tima-miroshnichenko-5591267.jpg&fm=jpg',
-  Investing:
-    'https://images.pexels.com/photos/5717758/pexels-photo-5717758.jpeg?cs=srgb&dl=pexels-karola-g-5717758.jpg&fm=jpg',
-  Taxes:
-    'https://images.pexels.com/photos/6863332/pexels-photo-6863332.jpeg?cs=srgb&dl=pexels-n-voitkevich-6863332.jpg&fm=jpg',
-  'Real Estate':
-    'https://images.pexels.com/photos/34135038/pexels-photo-34135038.jpeg?cs=srgb&dl=pexels-jakubzerdzicki-34135038.jpg&fm=jpg',
-}
-
 const TOPIC_BANK: Record<Category, string[]> = {
   'Personal Finance': [
     'budgeting with irregular income',
@@ -146,11 +131,84 @@ const TOPIC_BANK: Record<Category, string[]> = {
   ],
 }
 
+const DEFAULT_STOCK_COVERS: Record<Category, string[]> = {
+  'Personal Finance': [
+    'https://images.pexels.com/photos/5942583/pexels-photo-5942583.jpeg?cs=srgb&dl=pexels-karola-g-5942583.jpg&fm=jpg',
+    'https://images.pexels.com/photos/4386370/pexels-photo-4386370.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    'https://images.pexels.com/photos/4968630/pexels-photo-4968630.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  ],
+  Credit: [
+    'https://images.pexels.com/photos/6609234/pexels-photo-6609234.jpeg?cs=srgb&dl=pexels-mikhail-nilov-6609234.jpg&fm=jpg',
+    'https://images.pexels.com/photos/7821487/pexels-photo-7821487.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    'https://images.pexels.com/photos/3943728/pexels-photo-3943728.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  ],
+  Retirement: [
+    'https://images.pexels.com/photos/5591267/pexels-photo-5591267.jpeg?cs=srgb&dl=pexels-tima-miroshnichenko-5591267.jpg&fm=jpg',
+    'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    'https://images.pexels.com/photos/4050291/pexels-photo-4050291.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  ],
+  Investing: [
+    'https://images.pexels.com/photos/5717758/pexels-photo-5717758.jpeg?cs=srgb&dl=pexels-karola-g-5717758.jpg&fm=jpg',
+    'https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    'https://images.pexels.com/photos/6770775/pexels-photo-6770775.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  ],
+  Taxes: [
+    'https://images.pexels.com/photos/6863332/pexels-photo-6863332.jpeg?cs=srgb&dl=pexels-n-voitkevich-6863332.jpg&fm=jpg',
+    'https://images.pexels.com/photos/4386366/pexels-photo-4386366.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    'https://images.pexels.com/photos/6694543/pexels-photo-6694543.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  ],
+  'Real Estate': [
+    'https://images.pexels.com/photos/34135038/pexels-photo-34135038.jpeg?cs=srgb&dl=pexels-jakubzerdzicki-34135038.jpg&fm=jpg',
+    'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1600',
+    'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg?auto=compress&cs=tinysrgb&w=1600',
+  ],
+}
+
 const STOPWORDS = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'how', 'in', 'is',
-  'it', 'of', 'on', 'or', 'that', 'the', 'this', 'to', 'what', 'when', 'why', 'with',
-  'your', 'you', 'into', 'than', 'vs', 'vs.', 'after', 'before', 'more', 'less', 'over',
-  'under', 'about', 'best', 'guide', 'beginner', 'beginners', 'checklist', 'steps',
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'by',
+  'for',
+  'from',
+  'how',
+  'in',
+  'is',
+  'it',
+  'of',
+  'on',
+  'or',
+  'that',
+  'the',
+  'this',
+  'to',
+  'what',
+  'when',
+  'why',
+  'with',
+  'your',
+  'you',
+  'into',
+  'than',
+  'vs',
+  'vs.',
+  'after',
+  'before',
+  'more',
+  'less',
+  'over',
+  'under',
+  'about',
+  'best',
+  'guide',
+  'beginner',
+  'beginners',
+  'checklist',
+  'steps',
 ])
 
 function jsonError(message: string, status = 500) {
@@ -168,7 +226,9 @@ function getCategoryForToday(date = new Date()): Category {
 
 function getOrderedCategories(date = new Date()): Category[] {
   const dayNumber = getDayNumber(date)
-  return CATEGORY_ROTATION.map((_, index) => CATEGORY_ROTATION[(dayNumber + index) % CATEGORY_ROTATION.length])
+  return CATEGORY_ROTATION.map(
+    (_, index) => CATEGORY_ROTATION[(dayNumber + index) % CATEGORY_ROTATION.length]
+  )
 }
 
 function getOrderedTopics(category: Category, date = new Date()): string[] {
@@ -239,48 +299,14 @@ function categorySpecificGuidance(category: Category) {
   }
 }
 
-function pickStockCoverByCategory(category: Category): string {
-  const DEFAULT_STOCK_COVERS: Record<Category, string[]> = {
-  'Personal Finance': [
-    'https://images.pexels.com/photos/5942583/pexels-photo-5942583.jpeg?cs=srgb&dl=pexels-karola-g-5942583.jpg&fm=jpg',
-    'https://images.pexels.com/photos/4386370/pexels-photo-4386370.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    'https://images.pexels.com/photos/4968630/pexels-photo-4968630.jpeg?auto=compress&cs=tinysrgb&w=1600',
-  ],
-  Credit: [
-    'https://images.pexels.com/photos/6609234/pexels-photo-6609234.jpeg?cs=srgb&dl=pexels-mikhail-nilov-6609234.jpg&fm=jpg',
-    'https://images.pexels.com/photos/7821487/pexels-photo-7821487.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    'https://images.pexels.com/photos/3943728/pexels-photo-3943728.jpeg?auto=compress&cs=tinysrgb&w=1600',
-  ],
-  Retirement: [
-    'https://images.pexels.com/photos/5591267/pexels-photo-5591267.jpeg?cs=srgb&dl=pexels-tima-miroshnichenko-5591267.jpg&fm=jpg',
-    'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    'https://images.pexels.com/photos/4050291/pexels-photo-4050291.jpeg?auto=compress&cs=tinysrgb&w=1600',
-  ],
-  Investing: [
-    'https://images.pexels.com/photos/5717758/pexels-photo-5717758.jpeg?cs=srgb&dl=pexels-karola-g-5717758.jpg&fm=jpg',
-    'https://images.pexels.com/photos/6801648/pexels-photo-6801648.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    'https://images.pexels.com/photos/6770775/pexels-photo-6770775.jpeg?auto=compress&cs=tinysrgb&w=1600',
-  ],
-  Taxes: [
-    'https://images.pexels.com/photos/6863332/pexels-photo-6863332.jpeg?cs=srgb&dl=pexels-n-voitkevich-6863332.jpg&fm=jpg',
-    'https://images.pexels.com/photos/4386366/pexels-photo-4386366.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    'https://images.pexels.com/photos/6694543/pexels-photo-6694543.jpeg?auto=compress&cs=tinysrgb&w=1600',
-  ],
-  'Real Estate': [
-    'https://images.pexels.com/photos/34135038/pexels-photo-34135038.jpeg?cs=srgb&dl=pexels-jakubzerdzicki-34135038.jpg&fm=jpg',
-    'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1600',
-    'https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg?auto=compress&cs=tinysrgb&w=1600',
-  ],
-}
-
-function parseCoverUrls(raw?: string) {
+function parseCoverUrls(raw?: string): string[] {
   return (raw ?? '')
     .split(',')
     .map((url) => url.trim())
     .filter(Boolean)
 }
 
-function hashString(input: string) {
+function hashString(input: string): number {
   let hash = 0
   for (let i = 0; i < input.length; i += 1) {
     hash = (hash * 31 + input.charCodeAt(i)) >>> 0
@@ -309,7 +335,6 @@ function pickStockCoverByCategory(
   const index = hashString(seed) % pool.length
   return pool[index]
 }
-}
 
 function tokenizeForSimilarity(text: string) {
   return normalizeWhitespace(text.toLowerCase())
@@ -334,23 +359,24 @@ function jaccardSimilarity(a: string[], b: string[]) {
 }
 
 function buildAngleSignature(plan: TopicPlan) {
-  return tokenizeForSimilarity([
-    plan.primaryKeyword,
-    plan.workingTitle,
-    plan.angle,
-    plan.searchIntent,
-    plan.audience,
-    ...plan.relatedKeywords,
-  ].join(' '))
+  return tokenizeForSimilarity(
+    [
+      plan.primaryKeyword,
+      plan.workingTitle,
+      plan.angle,
+      plan.searchIntent,
+      plan.audience,
+      ...plan.relatedKeywords,
+    ].join(' ')
+  )
 }
 
 function buildRecentPostSignature(post: RecentPostSignal) {
-  return tokenizeForSimilarity([
-    post.title ?? '',
-    post.excerpt ?? '',
-    post.seo_title ?? '',
-    post.seo_description ?? '',
-  ].join(' '))
+  return tokenizeForSimilarity(
+    [post.title ?? '', post.excerpt ?? '', post.seo_title ?? '', post.seo_description ?? ''].join(
+      ' '
+    )
+  )
 }
 
 async function openaiTextJson(prompt: string) {
@@ -581,11 +607,7 @@ async function generateTopicPlan(category: Category, seedTopic: string): Promise
   }
 }
 
-function buildOutlinePrompt(
-  category: Category,
-  plan: TopicPlan,
-  internalLinks: InternalLink[]
-) {
+function buildOutlinePrompt(category: Category, plan: TopicPlan, internalLinks: InternalLink[]) {
   const linksText =
     internalLinks.length > 0
       ? internalLinks
@@ -709,9 +731,7 @@ function buildArticlePrompt(
 
   const sourcesText =
     outline.externalSources.length > 0
-      ? outline.externalSources
-          .map((s, index) => `${index + 1}. ${s.label} - ${s.url}`)
-          .join('\n')
+      ? outline.externalSources.map((s, index) => `${index + 1}. ${s.label} - ${s.url}`).join('\n')
       : 'No external sources selected.'
 
   return `
@@ -846,11 +866,7 @@ async function createDraftPost(
     read_time: readTime,
   }
 
-  const { data, error } = await supabase
-    .from('posts')
-    .insert(payload)
-    .select()
-    .single()
+  const { data, error } = await supabase.from('posts').insert(payload).select().single()
 
   if (error) {
     throw new Error(error.message)
@@ -959,7 +975,10 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const coverUrl = pickStockCoverByCategory(category, `${category}-${seedTopic}-${plan.primaryKeyword}`)
+    const coverUrl = pickStockCoverByCategory(
+      category,
+      `${category}-${seedTopic}-${plan.primaryKeyword}`
+    )
 
     console.log('daily-draft selected candidate', {
       preferredCategory,
