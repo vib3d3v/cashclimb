@@ -262,6 +262,34 @@ function normalizeWhitespace(text: string) {
   return text.replace(/\s+/g, ' ').trim()
 }
 
+function tokenizeForRelevance(text: string) {
+  return normalizeWhitespace(text.toLowerCase())
+    .split(/[^a-z0-9]+/i)
+    .filter((token) => token.length >= 3)
+}
+
+function scoreInternalLinkRelevance(
+  link: InternalLink,
+  category: Category,
+  primaryKeyword?: string,
+  relatedKeywords: string[] = []
+) {
+  let score = 0
+  if (link.category === category) score += 4
+
+  const haystack = tokenizeForRelevance(`${link.title} ${link.category ?? ''}`)
+  const needles = new Set([
+    ...tokenizeForRelevance(primaryKeyword ?? ''),
+    ...relatedKeywords.flatMap((keyword) => tokenizeForRelevance(keyword)),
+  ])
+
+  for (const needle of needles) {
+    if (haystack.includes(needle)) score += 2
+  }
+
+  return score
+}
+
 function tryParseJson(text: string) {
   const trimmed = text.trim()
   const start = trimmed.indexOf('{')
@@ -446,7 +474,11 @@ async function openaiTextJson(prompt: string) {
   return tryParseJson(outputText)
 }
 
-async function fetchInternalLinks(category: Category): Promise<InternalLink[]> {
+async function fetchInternalLinks(
+  category: Category,
+  primaryKeyword?: string,
+  relatedKeywords: string[] = []
+): Promise<InternalLink[]> {
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -454,17 +486,28 @@ async function fetchInternalLinks(category: Category): Promise<InternalLink[]> {
     .select('title, slug, category')
     .eq('published', true)
     .order('created_at', { ascending: false })
-    .limit(16)
+    .limit(24)
 
   if (error) {
     throw new Error(`Failed to fetch internal links: ${error.message}`)
   }
 
-  const allPosts = (data ?? []) as InternalLink[]
-  const sameCategory = allPosts.filter((post) => post.category === category).slice(0, 4)
-  const others = allPosts.filter((post) => post.category !== category).slice(0, 4)
+  const scored = ((data ?? []) as InternalLink[])
+    .filter((post) => post.slug)
+    .map((post) => ({
+      ...post,
+      relevance: scoreInternalLinkRelevance(post, category, primaryKeyword, relatedKeywords),
+    }))
+    .sort((a, b) => b.relevance - a.relevance)
 
-  return [...sameCategory, ...others].slice(0, 6)
+  const unique = new Map<string, InternalLink>()
+  for (const post of scored) {
+    if (!unique.has(post.slug)) {
+      unique.set(post.slug, { title: post.title, slug: post.slug, category: post.category })
+    }
+  }
+
+  return Array.from(unique.values()).slice(0, 6)
 }
 
 async function slugExists(slug: string) {
@@ -853,6 +896,103 @@ async function generateArticle(
   }
 }
 
+function buildHumanizePrompt(
+  article: GeneratedArticle,
+  category: Category,
+  plan: TopicPlan,
+  outline: ArticleOutline,
+  internalLinks: InternalLink[]
+) {
+  const linksText =
+    internalLinks.length > 0
+      ? internalLinks
+          .map(
+            (link, index) =>
+              `${index + 1}. Title: "${link.title}" | URL: /blog/${link.slug} | Category: ${link.category ?? 'General'}`
+          )
+          .join('\n')
+      : 'No internal links available.'
+
+  return `
+You are a senior editor doing the final human polish for a finance article on CashClimb.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "title": "string",
+  "excerpt": "string",
+  "seoTitle": "string",
+  "seoDescription": "string",
+  "contentHtml": "string",
+  "author": "CashClimb Editorial"
+}
+
+Article context:
+- Category: ${category}
+- Audience: ${plan.audience}
+- Primary keyword: ${outline.primaryKeyword}
+- Search intent: ${outline.searchIntent}
+- Related keywords: ${outline.relatedKeywords.join(', ')}
+
+Available internal links to preserve or add naturally:
+${linksText}
+
+Humanization goals:
+- Keep the article factually consistent and SEO-aligned.
+- Preserve the same overall meaning, structure, and headings unless a small improvement makes it read better.
+- Remove robotic phrasing, filler transitions, and generic AI-style wording.
+- Vary sentence length and paragraph rhythm.
+- Add stronger transitions between sections.
+- Make the tone feel like a thoughtful finance editor, not a template.
+- Keep practical examples and decision-making guidance.
+- Preserve or improve 2 to 4 natural internal links using <a href="/blog/...">...</a>.
+- Keep any authority links and disclaimers.
+- Do not use markdown. Return valid HTML only in contentHtml.
+- Do not introduce new unverifiable facts or statistics.
+- Do not make personalized financial, tax, or legal recommendations.
+
+Current draft to refine:
+TITLE: ${article.title}
+EXCERPT: ${article.excerpt}
+SEO TITLE: ${article.seoTitle}
+SEO DESCRIPTION: ${article.seoDescription}
+CONTENT HTML:
+${article.contentHtml}
+
+Prefer to keep title, excerpt, seoTitle, and seoDescription very close to the current version unless a tiny wording improvement helps clarity or click-through rate.
+Set author to "${AUTHOR_NAME}".
+`
+}
+
+async function humanizeArticle(
+  article: GeneratedArticle,
+  category: Category,
+  plan: TopicPlan,
+  outline: ArticleOutline,
+  internalLinks: InternalLink[]
+): Promise<GeneratedArticle> {
+  const parsed = (await openaiTextJson(
+    buildHumanizePrompt(article, category, plan, outline, internalLinks)
+  )) as Partial<GeneratedArticle>
+
+  if (!parsed.contentHtml) {
+    throw new Error('Humanize pass returned incomplete fields.')
+  }
+
+  return {
+    title: parsed.title?.trim() || article.title,
+    excerpt: parsed.excerpt?.trim() || article.excerpt,
+    seoTitle: parsed.seoTitle?.trim() || article.seoTitle,
+    seoDescription: parsed.seoDescription?.trim() || article.seoDescription,
+    contentHtml: parsed.contentHtml.trim(),
+    author: parsed.author?.trim() || article.author || AUTHOR_NAME,
+  }
+}
+
+function internalLinksSummary(contentHtml: string) {
+  const matches = Array.from(contentHtml.matchAll(/href=\"(\/blog\/[^\"]+)\"/gi)).map((m) => m[1])
+  return Array.from(new Set(matches)).slice(0, 6)
+}
+
 async function createDraftPost(
   article: GeneratedArticle,
   category: Category,
@@ -896,6 +1036,8 @@ async function createDraftPost(
       searchIntent: outline.searchIntent,
       seedKeyword: plan.primaryKeyword,
       externalSources: outline.externalSources,
+      humanized: true,
+      internalLinkTargets: internalLinksSummary(article.contentHtml),
     },
     published: false,
     read_time: readTime,
@@ -1003,9 +1145,10 @@ async function runDraftGeneration(now: Date, queueItem?: QueueRow) {
   }
 
   const { category, seedTopic, plan } = candidate
-  const internalLinks = await fetchInternalLinks(category)
+  const internalLinks = await fetchInternalLinks(category, plan.primaryKeyword, plan.relatedKeywords)
   const outline = await generateOutline(category, plan, internalLinks)
-  const article = await generateArticle(category, plan, outline, internalLinks)
+  const articleDraft = await generateArticle(category, plan, outline, internalLinks)
+  const article = await humanizeArticle(articleDraft, category, plan, outline, internalLinks)
   const slug = buildSlug(article.title)
 
   if (await slugExists(slug)) {

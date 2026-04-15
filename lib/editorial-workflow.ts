@@ -58,6 +58,20 @@ function buildCheck(
   return { name, passed, details, severity }
 }
 
+function sentenceLengths(text: string) {
+  return text
+    .split(/[.!?]+/)
+    .map((sentence) => sentence.trim().split(/\s+/).filter(Boolean).length)
+    .filter((len) => len > 0)
+}
+
+function hasSentenceVariety(lengths: number[]) {
+  if (lengths.length < 4) return false
+  const min = Math.min(...lengths)
+  const max = Math.max(...lengths)
+  return min <= 10 && max >= 18
+}
+
 export function evaluateFinanceArticle(input: {
   title: string
   excerpt: string
@@ -83,6 +97,10 @@ export function evaluateFinanceArticle(input: {
   )
   const hasExamples = /for example|for instance|let'?s say|imagine that|suppose you/i.test(plainText)
   const hasTakeaways = /<h2>\s*key takeaways\s*<\/h2>/i.test(input.body) && /<ul>[\s\S]*<\/ul>/i.test(input.body)
+  const lengths = sentenceLengths(plainText)
+  const variedSentenceRhythm = hasSentenceVariety(lengths)
+  const readerAwareLanguage = /\byou\b|\byour\b/i.test(plainText)
+  const roboticPhrasing = /when it comes to|in today's world|navigating the|delve into|it is important to note|in conclusion,? this article/i.test(plainText)
 
   checks.push(
     buildCheck(
@@ -189,6 +207,33 @@ export function evaluateFinanceArticle(input: {
       'Includes examples or scenarios',
       hasExamples,
       'Use one concrete example or scenario so the piece feels editorial, not generic.',
+      'warn'
+    )
+  )
+
+  checks.push(
+    buildCheck(
+      'Uses reader-aware language',
+      readerAwareLanguage,
+      'Speak to the reader directly at least once so the article feels guided, not generic.',
+      'warn'
+    )
+  )
+
+  checks.push(
+    buildCheck(
+      'Uses varied sentence rhythm',
+      variedSentenceRhythm,
+      'Mix shorter and longer sentences so the article reads more naturally.',
+      'warn'
+    )
+  )
+
+  checks.push(
+    buildCheck(
+      'Avoids robotic filler phrasing',
+      !roboticPhrasing,
+      'Trim template-like transitions and generic filler language.',
       'warn'
     )
   )

@@ -1,9 +1,11 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
+import nextDynamic from 'next/dynamic'
 import { createAdminClient } from '@/lib/supabase-server'
-import KeywordGeneratorPanel from '@/components/admin/KeywordGeneratorPanel'
-import KeywordRowActions from '@/components/admin/KeywordRowActions'
+
+const KeywordGeneratorPanel = nextDynamic(() => import('@/components/admin/KeywordGeneratorPanel'), { ssr: false })
+const KeywordRowActions = nextDynamic(() => import('@/components/admin/KeywordRowActions'), { ssr: false })
 
 export default async function AdminKeywordsPage() {
   const supabase = createAdminClient()

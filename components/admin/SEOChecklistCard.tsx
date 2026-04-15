@@ -1,5 +1,8 @@
 import type { WorkflowEvaluation } from '@/types'
 import SEORecheckButton from '@/components/admin/SEORecheckButton'
+import HumanizeButton from '@/components/admin/HumanizeButton'
+import RefreshArticleButton from '@/components/admin/RefreshArticleButton'
+import ImproveFailedChecksButton from '@/components/admin/ImproveFailedChecksButton'
 
 function toneFor(score: number) {
   if (score >= 85) return 'text-emerald-300 border-emerald-400/20 bg-emerald-400/10'
@@ -33,8 +36,11 @@ export default function SEOChecklistCard({
         </div>
       </div>
 
-      <div className="mt-5">
+      <div className="mt-5 space-y-3">
         <SEORecheckButton postId={postId} />
+        <HumanizeButton postId={postId} />
+        <RefreshArticleButton postId={postId} />
+        <ImproveFailedChecksButton postId={postId} />
       </div>
 
       <div className="mt-6 space-y-3">
