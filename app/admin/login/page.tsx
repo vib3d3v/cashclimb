@@ -29,6 +29,7 @@ function LoginForm() {
 
       if (!res.ok) throw new Error('Invalid password')
 
+      sessionStorage.setItem('cc-admin-key', password)
       toast.success('Welcome back!')
       router.replace(from)
       router.refresh()

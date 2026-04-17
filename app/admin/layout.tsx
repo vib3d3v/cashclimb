@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import AdminSignOutLink from '@/components/admin/AdminSignOutLink'
 
 const NAV = [
   { href: '/admin', label: '📊 Dashboard' },
@@ -30,9 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="p-4 border-t border-border">
-          <Link href="/api/auth/logout" className="block text-xs text-[#6A6460] hover:text-red-400 transition-colors text-center">
-            Sign out
-          </Link>
+          <AdminSignOutLink />
         </div>
       </aside>
 
