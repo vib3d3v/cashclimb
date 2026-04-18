@@ -6,6 +6,34 @@ import PostCard from '@/components/PostCard'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Post } from '@/types'
+import type { Metadata } from 'next'
+
+const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org').replace(/\/$/, '')
+const socialImage = '/opengraph-image'
+
+export const metadata: Metadata = {
+  title: 'CashClimb — Personal Finance & Investing Intelligence',
+  description:
+    'Clear, jargon-free financial insights on investing, personal finance, credit, and wealth-building for people who take their financial future seriously.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'CashClimb — Personal Finance & Investing Intelligence',
+    description:
+      'Clear, jargon-free financial insights on investing, personal finance, credit, and wealth-building for people who take their financial future seriously.',
+    url: siteUrl,
+    type: 'website',
+    images: [{ url: socialImage, width: 1200, height: 630, alt: 'CashClimb' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'CashClimb — Personal Finance & Investing Intelligence',
+    description:
+      'Clear, jargon-free financial insights on investing, personal finance, credit, and wealth-building for people who take their financial future seriously.',
+    images: [socialImage],
+  },
+}
 
 const CAT_COLORS: Record<string, string> = {
   Investing: '#D4AF37',

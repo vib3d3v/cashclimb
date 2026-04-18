@@ -27,10 +27,11 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = createAdminClient()
+  const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org').replace(/\/$/, '')
 
   const { data } = await supabase
     .from('posts')
-    .select('title, excerpt, cover_url, seo_title, seo_description, published')
+    .select('slug, title, excerpt, cover_url, seo_title, seo_description, created_at, updated_at, published')
     .eq('slug', params.slug)
     .eq('published', true)
     .maybeSingle()
@@ -39,21 +40,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const metaTitle = data.seo_title || data.title
   const metaDescription = data.seo_description || data.excerpt
+  const canonicalUrl = `${siteUrl}/blog/${data.slug}`
+  const socialImage = data.cover_url || `${siteUrl}/opengraph-image`
 
   return {
     title: metaTitle,
     description: metaDescription,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title: metaTitle,
       description: metaDescription,
-      images: data.cover_url ? [data.cover_url] : [],
+      url: canonicalUrl,
+      images: [{ url: socialImage }],
       type: 'article',
+      publishedTime: data.created_at || undefined,
+      modifiedTime: data.updated_at || data.created_at || undefined,
     },
     twitter: {
       card: 'summary_large_image',
       title: metaTitle,
       description: metaDescription,
-      images: data.cover_url ? [data.cover_url] : [],
+      images: [socialImage],
     },
   }
 }

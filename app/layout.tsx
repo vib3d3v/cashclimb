@@ -15,27 +15,40 @@ const dmSans = DM_Sans({
   display: 'swap',
 })
 
+const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org').replace(/\/$/, '')
+const socialImage = '/opengraph-image'
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org'),
+  metadataBase: new URL(siteUrl),
   title: {
     default: 'CashClimb — Personal Finance & Investing Intelligence',
     template: '%s | CashClimb',
   },
   description:
-    'Clear, jargon-free financial insights on investing, personal finance, credit, and wealth-building — for people who take their financial future seriously.',
+    'Clear, jargon-free financial insights on investing, personal finance, credit, and wealth-building for people who take their financial future seriously.',
   keywords: ['personal finance', 'investing', 'wealth building', 'budgeting', 'financial independence'],
+  applicationName: 'CashClimb',
+  authors: [{ name: 'CashClimb Editorial' }],
+  creator: 'CashClimb',
+  publisher: 'CashClimb',
+  robots: { index: true, follow: true },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://cashclimb.org',
     siteName: 'CashClimb',
-    images: [{ url: '/og-default.png', width: 1200, height: 630 }],
+    title: 'CashClimb — Personal Finance & Investing Intelligence',
+    description:
+      'Clear, jargon-free financial insights on investing, personal finance, credit, and wealth-building for people who take their financial future seriously.',
+    images: [{ url: socialImage, width: 1200, height: 630, alt: 'CashClimb' }],
   },
   twitter: {
     card: 'summary_large_image',
     site: '@cashclimb',
+    title: 'CashClimb — Personal Finance & Investing Intelligence',
+    description:
+      'Clear, jargon-free financial insights on investing, personal finance, credit, and wealth-building for people who take their financial future seriously.',
+    images: [socialImage],
   },
-  robots: { index: true, follow: true },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
