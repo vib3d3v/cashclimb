@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { authedFetch } from './authedFetch'
 
-type WorkflowStatus = 'draft_ready' | 'review_required' | 'approved' | 'published' | 'rejected' | null
+type WorkflowStatus =
+  | 'draft'
+  | 'approved'
+  | 'published'
+  | 'review_required'
+  | 'rejected';
 
 export default function EditorialActionButtons({
   postId,

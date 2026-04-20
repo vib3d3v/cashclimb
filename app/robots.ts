@@ -7,9 +7,29 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
+        allow: [
+          '/',
+          '/blog',
+          '/blog/',
+          '/about',
+          '/authors',
+          '/tools',
+          '/tools/compound-calculator',
+          '/tools/savings-calculator',
+        ],
+        disallow: [
+          '/admin',
+          '/admin/',
+          '/api',
+          '/api/',
+          '/auth',
+          '/auth/',
+          '/_next/',
+          '/*?*',
+        ],
       },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,
+    host: siteUrl,
   }
 }

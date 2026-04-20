@@ -3,6 +3,11 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import PostCard from '@/components/PostCard'
 import type { Post } from '@/types'
+import type { Metadata } from 'next'
+
+const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org').replace(/\/$/, '')
+const canonicalUrl = `${siteUrl}/blog`
+const socialImage = `${siteUrl}/opengraph-image`
 
 const CATEGORIES = [
   'All',
@@ -14,7 +19,31 @@ const CATEGORIES = [
   'Retirement',
 ]
 
-export const revalidate = 60
+export const metadata: Metadata = {
+  title: 'CashClimb Articles',
+  description:
+    'Browse practical, plain-English articles on personal finance, investing, debt, retirement, credit, and real-world money decisions.',
+  alternates: {
+    canonical: canonicalUrl,
+  },
+  openGraph: {
+    title: 'CashClimb Articles',
+    description:
+      'Browse practical, plain-English articles on personal finance, investing, debt, retirement, credit, and real-world money decisions.',
+    url: canonicalUrl,
+    type: 'website',
+    images: [{ url: socialImage, width: 1200, height: 630, alt: 'CashClimb Articles' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'CashClimb Articles',
+    description:
+      'Browse practical, plain-English articles on personal finance, investing, debt, retirement, credit, and real-world money decisions.',
+    images: [socialImage],
+  },
+}
+
+export const revalidate = 300
 
 interface Props {
   searchParams: { category?: string; search?: string }
@@ -54,7 +83,7 @@ export default async function BlogPage({ searchParams }: Props) {
             retirement, credit, property, and personal finance.
           </p>
 
-          <form method="GET" className="mt-8 flex flex-wrap gap-3 items-center">
+          <form method="GET" action="/blog" className="mt-8 flex flex-wrap gap-3 items-center">
             <input
               name="search"
               defaultValue={search}
