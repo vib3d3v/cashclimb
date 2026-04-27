@@ -1,10 +1,12 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "next build",
   "crons": [
     {
+      "path": "/api/admin/generate-keywords?count=10",
+      "schedule": "0 6 * * 1"
+    },
+    {
       "path": "/api/cron/daily-draft",
-      "schedule": "0 1 * * *"
+      "schedule": "0 7 * * *"
     }
   ]
 }
