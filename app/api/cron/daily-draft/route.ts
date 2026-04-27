@@ -832,14 +832,18 @@ function buildArticlePrompt(
       ? internalLinks
           .map(
             (link, index) =>
-              `${index + 1}. Title: "${link.title}" | URL: /blog/${link.slug} | Category: ${link.category ?? 'General'}`
+              `${index + 1}. Title: "${link.title}" | URL: /blog/${link.slug} | Category: ${
+                link.category ?? 'General'
+              }`
           )
           .join('\n')
       : 'No internal links available.'
 
   const sourcesText =
     outline.externalSources.length > 0
-      ? outline.externalSources.map((s, index) => `${index + 1}. ${s.label} - ${s.url}`).join('\n')
+      ? outline.externalSources
+          .map((source, index) => `${index + 1}. ${source.label} - ${source.url}`)
+          .join('\n')
       : 'No external sources selected.'
 
   return `
@@ -869,15 +873,15 @@ Article strategy:
 - Audience: ${plan.audience}
 - Angle: ${plan.angle}
 
-Approved structure:
+Approved outline:
 - Title: ${outline.title}
 - Excerpt: ${outline.excerpt}
 - SEO title: ${outline.seoTitle}
 - SEO description: ${outline.seoDescription}
-- H2 sections:
-${outline.h2s.map((h, i) => `${i + 1}. ${h}`).join('\n')}
-- Key takeaways:
-${outline.keyTakeaways.map((k, i) => `${i + 1}. ${k}`).join('\n')}
+- Planned H2 sections:
+${outline.h2s.map((heading, index) => `${index + 1}. ${heading}`).join('\n')}
+- Planned key takeaways:
+${outline.keyTakeaways.map((takeaway, index) => `${index + 1}. ${takeaway}`).join('\n')}
 
 Available internal links:
 ${linksText}
@@ -885,38 +889,90 @@ ${linksText}
 Approved external sources:
 ${sourcesText}
 
-Writing requirements:
-- Write for Western readers only.
-- Use plain, confident, editorial English.
-- Do not use markdown.
+PRIMARY GOAL:
+Write a practical, trustworthy, SEO-optimized article that can rank on Google and be cited by AI search systems.
+
+MANDATORY HTML STRUCTURE:
+Your contentHtml MUST follow this order exactly:
+
+1. Start with this disclaimer:
+<p><em>This content is for informational and educational purposes only and does not constitute financial advice.</em></p>
+
+2. Then write an answer-first introduction in 2 to 3 short paragraphs.
+The first paragraph must directly answer the main search intent.
+
+3. Include:
+<h2>Quick Answer</h2>
+Write a concise answer in 1 to 2 paragraphs.
+
+4. Include:
+<h2>Key Takeaways</h2>
+Use a <ul> with 3 to 5 useful bullet points.
+
+5. Include the main educational sections.
+Use the approved H2 sections where possible, but make sure the article also includes:
+- <h2>What Is ${outline.primaryKeyword}?</h2> or a natural equivalent
+- <h2>How It Works</h2> or a natural equivalent
+- <h2>Step-by-Step Strategy</h2> or a natural equivalent
+- <h2>Real Examples</h2>
+- <h2>Common Mistakes to Avoid</h2>
+- <h2>What You Can Do Next</h2>
+- <h2>FAQ</h2>
+- <h2>Sources</h2>
+
+6. Under <h2>Real Examples</h2>, include at least 2 realistic examples.
+At least one example must include simple numbers in USD.
+
+7. Under <h2>FAQ</h2>, include 4 to 6 questions using <h3> for each question and <p> for each answer.
+
+8. Under <h2>Sources</h2>, include at least 2 credible external links using:
+<a href="URL" target="_blank" rel="noopener noreferrer">Label</a>
+
+CONTENT RULES:
 - contentHtml must be valid HTML only.
-- Start with one short intro paragraph.
-- Immediately after the intro, include:
-  <h2>Key Takeaways</h2>
-  followed by a <ul> with 3 to 5 bullet points.
-- Use the approved H2 structure above.
-- Each section should move the reader forward and answer a real question.
-- Include at least one concrete numerical example using USD.
-- Include 2 to 4 natural internal links using <a href="/blog/...">...</a>.
-- Include 1 to 2 external authority links using:
-  <a href="URL" target="_blank" rel="noopener noreferrer">Label</a>
-- Include a "Common Mistakes to Avoid" section if not already present in the H2 list.
-- Include a "What You Can Do Next" section if not already present in the H2 list.
-- End with a short conclusion.
-- Keep the article around 1000 to 1500 words.
-- Avoid fluff, repetition, generic filler, and robotic transitions.
+- Do not use markdown.
+- Use only standard tags like <p>, <h2>, <h3>, <ul>, <ol>, <li>, <strong>, <em>, and <a>.
+- Keep paragraphs short.
+- Avoid fluff, generic filler, robotic transitions, and repeated ideas.
 - Do not mention AI.
-- Do not make guarantees, predictions, or personalized financial advice.
-- Do not use Philippine references, agencies, institutions, or slang.
-- Prefer examples and framing relevant to the US, Canada, UK, and Australia.
+- Do not use Philippine references, agencies, institutions, examples, or slang.
+- Write for Western readers only.
+- Prefer examples relevant to the US, Canada, UK, and Australia.
+- Keep the article around 1,400 to 2,200 words.
 
-Thinking quality requirements:
-- Before writing, internally plan the reader’s decision problem.
-- Explain tradeoffs, not just tips.
-- Use specific, practical explanations.
-- Write like a strong editor, not a generic content generator.
+SEO RULES:
+- Use the primary keyword naturally in the intro, at least one heading, and the conclusion.
+- Use related keywords naturally where they fit.
+- The title should be compelling, clear, and clickable without sounding spammy.
+- The seoDescription should be 140 to 160 characters and benefit-driven.
+- Make sections easy for Google and AI systems to extract.
 
-Return the same title, excerpt, seoTitle, and seoDescription from the approved outline unless a tiny improvement is necessary.
+INTERNAL LINK RULES:
+- Include 2 to 4 natural internal links using <a href="/blog/...">...</a>.
+- Only use links from the available internal links list.
+- Do not force links where they do not fit.
+
+FINANCE SAFETY RULES:
+- Do not give personalized financial, tax, legal, investing, or retirement advice.
+- Do not promise outcomes.
+- Do not suggest guaranteed returns.
+- Do not make market predictions.
+- Do not recommend specific securities, stocks, crypto assets, or providers.
+- Explain tradeoffs and encourage readers to consider their situation.
+- For tax, retirement, investing, credit, real estate, and debt topics, include careful wording and avoid certainty.
+
+QUALITY BAR:
+The final article should feel like it was written by a strong human finance editor.
+It should:
+- answer the reader quickly
+- explain the topic clearly
+- give practical next steps
+- include realistic examples
+- avoid unsupported claims
+- include credible sources
+- be useful enough to publish without major rewriting
+
+Return the same title, excerpt, seoTitle, and seoDescription from the approved outline unless a small improvement is clearly better.
 Set author to "${AUTHOR_NAME}".
 `
 }
