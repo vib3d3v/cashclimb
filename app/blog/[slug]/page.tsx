@@ -9,6 +9,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { createAdminClient } from '@/lib/supabase-server'
 import { getAuthorByName } from '@/lib/authors'
+import { getAutoAuthor } from '@/lib/seo-authors'
 import type { Post } from '@/types'
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org').replace(/\/$/, '')
@@ -95,7 +96,8 @@ export default async function BlogPostPage({
 
   if (!post) notFound()
 
-  const author = getAuthorByName(post.author)
+  const fallbackAuthor = getAutoAuthor('cashclimb', post.category)
+  const author = getAuthorByName(post.author || fallbackAuthor.name)
   const relatedPosts = await getRelatedPosts(post)
   const articleUrl = `${siteUrl}/blog/${post.slug}`
   const image = post.cover_url || `${siteUrl}/opengraph-image`
@@ -254,6 +256,17 @@ export default async function BlogPostPage({
 
             <div className="mt-10 rounded-2xl border border-border bg-bg-2 p-6">
               <p className="text-xs uppercase tracking-widest text-gold font-bold mb-3">
+                Reviewed by
+              </p>
+              <h2 className="text-[#F0EDE8] font-bold">{fallbackAuthor.reviewerName}</h2>
+              <p className="text-sm text-[#9A9490]">{fallbackAuthor.reviewerRole}</p>
+              <p className="text-sm text-[#B7B0AA] leading-relaxed mt-3">
+                {fallbackAuthor.reviewerBio}
+              </p>
+            </div>
+
+            <div className="mt-10 rounded-2xl border border-border bg-bg-2 p-6">
+              <p className="text-xs uppercase tracking-widest text-gold font-bold mb-3">
                 About the author
               </p>
               <div className="flex items-start gap-4">
@@ -324,6 +337,15 @@ export default async function BlogPostPage({
                   <strong className="text-[#F0EDE8]">Author:</strong> {author.name}
                 </p>
               </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-bg-2 p-5">
+              <p className="text-xs uppercase tracking-widest text-gold font-bold mb-3">
+                Reviewed by
+              </p>
+              <p className="text-sm text-[#B7B0AA] leading-relaxed">
+                <strong className="text-[#F0EDE8]">{fallbackAuthor.reviewerName}</strong> — {fallbackAuthor.reviewerBio}
+              </p>
             </div>
 
             <div className="rounded-2xl border border-border bg-bg-2 p-5">
