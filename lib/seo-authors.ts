@@ -15,28 +15,48 @@ export function getAutoAuthor(site: SiteKey, category?: string): AutoAuthor {
 
   if (site === 'cashclimb') {
     if (
-      c.includes('side hustle') ||
-      c.includes('make money') ||
-      c.includes('income') ||
-      c.includes('personal finance')
+      c.includes('pension') ||
+      c.includes('retirement') ||
+      c.includes('investing') ||
+      c.includes('investment') ||
+      c.includes('real estate') ||
+      c.includes('property')
     ) {
       return {
-        name: 'Daniel Reeves',
-        role: 'Personal Finance Writer',
-        bio: 'Daniel Reeves writes practical money advice focused on better habits, stronger savings, and realistic ways to increase income.',
-        initials: 'DR',
-        reviewerName: 'CashClimb Editorial',
+        name: 'Jordan Lee',
+        role: 'Investing and Retirement Writer',
+        bio: 'Jordan Lee writes about investing basics, retirement planning, pensions, superannuation, and long-term wealth decisions for everyday readers.',
+        initials: 'JL',
+        reviewerName: 'CashClimb Review Desk',
+        reviewerRole: 'Editorial Review Team',
+        reviewerBio: 'CashClimb articles are reviewed for clarity, usefulness, and responsible financial education. Content is informational only and is not personal financial advice.',
+      }
+    }
+
+    if (
+      c.includes('tax') ||
+      c.includes('credit') ||
+      c.includes('bank') ||
+      c.includes('scam') ||
+      c.includes('tools')
+    ) {
+      return {
+        name: 'Sophie Tran',
+        role: 'Finance Writer',
+        bio: 'Sophie Tran covers credit, banking, tax organization, and practical money systems that help readers stay organized and in control.',
+        initials: 'ST',
+        reviewerName: 'CashClimb Review Desk',
         reviewerRole: 'Editorial Review Team',
         reviewerBio: 'CashClimb articles are reviewed for clarity, usefulness, and responsible financial education. Content is informational only and is not personal financial advice.',
       }
     }
 
     return {
-      name: 'Sophie Tran',
-      role: 'Finance Writer',
-      bio: 'Sophie Tran covers budgeting, digital banking, and simple financial systems that help readers stay organized and in control.',
-      initials: 'ST',
-      reviewerName: 'CashClimb Editorial',
+      name: 'Daniel Reeves',
+      role: 'Personal Finance Writer',
+      bio: 'Daniel Reeves writes practical money advice focused on better habits, stronger savings, and realistic ways to increase income.',
+      initials: 'DR',
+      reviewerName: 'CashClimb Review Desk',
       reviewerRole: 'Editorial Review Team',
       reviewerBio: 'CashClimb articles are reviewed for clarity, usefulness, and responsible financial education. Content is informational only and is not personal financial advice.',
     }

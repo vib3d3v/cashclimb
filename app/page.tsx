@@ -45,7 +45,8 @@ const CAT_COLORS: Record<string, string> = {
   Retirement: '#C46A8A',
 }
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', {

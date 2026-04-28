@@ -7,10 +7,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import Comments from '@/components/Comments'
+import ViewTracker from '@/components/ViewTracker'
 import { createAdminClient } from '@/lib/supabase-server'
 import { getAuthorByName, resolvePostAuthorName } from '@/lib/authors'
-import { getAutoAuthor } from '@/lib/seo-authors'
-import type { Post } from '@/types'
+import type { Comment, Post } from '@/types'
 
 const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org').replace(/\/$/, '')
 
@@ -51,6 +52,19 @@ async function getRelatedPosts(post: Post) {
   return (data ?? []) as Post[]
 }
 
+async function getApprovedComments(postId: string) {
+  const supabase = createAdminClient()
+
+  const { data } = await supabase
+    .from('comments')
+    .select('*')
+    .eq('post_id', postId)
+    .eq('approved', true)
+    .order('created_at', { ascending: false })
+
+  return (data ?? []) as Comment[]
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -62,10 +76,12 @@ export async function generateMetadata({
 
   const url = `${siteUrl}/blog/${post.slug}`
   const image = post.cover_url || `${siteUrl}/opengraph-image`
+  const author = getAuthorByName(resolvePostAuthorName(post))
 
   return {
     title: `${post.title} | CashClimb`,
     description: post.excerpt,
+    authors: [{ name: author.name, url: `${siteUrl}/authors/${author.slug}` }],
     alternates: {
       canonical: url,
     },
@@ -77,6 +93,7 @@ export async function generateMetadata({
       images: [{ url: image }],
       publishedTime: post.created_at,
       modifiedTime: post.updated_at,
+      authors: [author.name],
     },
     twitter: {
       card: 'summary_large_image',
@@ -96,59 +113,106 @@ export default async function BlogPostPage({
 
   if (!post) notFound()
 
-  const fallbackAuthor = getAutoAuthor('cashclimb', post.category)
-  const authorName = resolvePostAuthorName(post)
-  const author = getAuthorByName(authorName)
+  const author = getAuthorByName(resolvePostAuthorName(post))
   const relatedPosts = await getRelatedPosts(post)
+  const comments = await getApprovedComments(post.id)
   const articleUrl = `${siteUrl}/blog/${post.slug}`
   const image = post.cover_url || `${siteUrl}/opengraph-image`
 
   const articleSchema = {
     '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    headline: post.title,
-    description: post.excerpt,
-    image,
-    datePublished: post.created_at,
-    dateModified: post.updated_at || post.created_at,
-    author: {
-      '@type': author.schemaType,
-      name: author.name,
-      url: `${siteUrl}/authors/${author.slug}`,
-      description: author.intro,
-      knowsAbout: author.topics,
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'CashClimb',
-      url: siteUrl,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${siteUrl}/opengraph-image`,
-      },
-    },
-    mainEntityOfPage: articleUrl,
-  }
-
-  const faqSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
+    '@graph': [
       {
-        '@type': 'Question',
-        name: `Is ${post.title} financial advice?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'No. CashClimb content is for informational and educational purposes only and should not be treated as personal financial advice.',
-        },
+        '@type': 'Organization',
+        '@id': `${siteUrl}/#organization`,
+        name: 'CashClimb',
+        url: siteUrl,
+        description:
+          'CashClimb publishes clear, practical personal finance guides for everyday readers.',
       },
       {
-        '@type': 'Question',
-        name: 'Who reviews CashClimb content?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'CashClimb articles are created and reviewed by the editorial team for clarity, usefulness, and responsible personal finance guidance.',
+        '@type': author.schemaType,
+        '@id': `${siteUrl}/authors/${author.slug}#person`,
+        name: author.name,
+        url: `${siteUrl}/authors/${author.slug}`,
+        description: author.intro,
+        jobTitle: author.role,
+        worksFor: {
+          '@id': `${siteUrl}/#organization`,
         },
+        knowsAbout: author.topics,
+      },
+      {
+        '@type': 'Article',
+        '@id': `${articleUrl}#article`,
+        headline: post.title,
+        description: post.excerpt,
+        image: [image],
+        datePublished: post.created_at,
+        dateModified: post.updated_at || post.created_at,
+        author: {
+          '@id': `${siteUrl}/authors/${author.slug}#person`,
+        },
+        reviewedBy: {
+          '@type': 'Organization',
+          name: 'CashClimb Review Desk',
+          description:
+            'CashClimb articles are reviewed for clarity, usefulness, and responsible financial education. Content is informational only and is not personal financial advice.',
+        },
+        publisher: {
+          '@id': `${siteUrl}/#organization`,
+        },
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': articleUrl,
+        },
+        articleSection: post.category,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${articleUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: siteUrl,
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Articles',
+            item: `${siteUrl}/blog`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: post.title,
+            item: articleUrl,
+          },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${articleUrl}#faq`,
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: `Is ${post.title} financial advice?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'No. CashClimb content is for informational and educational purposes only and should not be treated as personal financial advice.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Who reviews CashClimb content?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'CashClimb articles are reviewed by the CashClimb Review Desk for clarity, usefulness, and responsible personal finance guidance.',
+            },
+          },
+        ],
       },
     ],
   }
@@ -156,15 +220,11 @@ export default async function BlogPostPage({
   return (
     <>
       <Navbar />
+      <ViewTracker postId={post.id} path={`/blog/${post.slug}`} />
 
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-      />
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 
       <main className="max-w-6xl mx-auto px-6 py-12">
@@ -259,10 +319,10 @@ export default async function BlogPostPage({
               <p className="text-xs uppercase tracking-widest text-gold font-bold mb-3">
                 Reviewed by
               </p>
-              <h2 className="text-[#F0EDE8] font-bold">{fallbackAuthor.reviewerName}</h2>
-              <p className="text-sm text-[#9A9490]">{fallbackAuthor.reviewerRole}</p>
+              <h2 className="text-[#F0EDE8] font-bold">CashClimb Review Desk</h2>
+              <p className="text-sm text-[#9A9490]">Editorial Review Team</p>
               <p className="text-sm text-[#B7B0AA] leading-relaxed mt-3">
-                {fallbackAuthor.reviewerBio}
+                CashClimb articles are reviewed for clarity, usefulness, and responsible financial education. Content is informational only and is not personal financial advice.
               </p>
             </div>
 
@@ -290,6 +350,8 @@ export default async function BlogPostPage({
               </div>
             </div>
 
+            <Comments postId={post.id} initial={comments} />
+
             {relatedPosts.length > 0 ? (
               <section className="mt-12">
                 <p className="text-xs uppercase tracking-widest text-gold font-bold mb-4">
@@ -297,9 +359,7 @@ export default async function BlogPostPage({
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {relatedPosts.map((item) => {
-                    const relatedAuthorName = resolvePostAuthorName(item)
-                    const relatedAuthor = getAuthorByName(relatedAuthorName)
-
+                    const relatedAuthor = getAuthorByName(resolvePostAuthorName(item))
                     return (
                       <Link
                         key={item.id}
@@ -315,9 +375,7 @@ export default async function BlogPostPage({
                         <p className="text-sm text-[#9A9490] mt-3 line-clamp-3">
                           {item.excerpt}
                         </p>
-                        <p className="text-xs text-[#6A6460] mt-4">
-                          By {relatedAuthor.name}
-                        </p>
+                        <p className="text-xs text-[#6A6460] mt-4">By {relatedAuthor.name}</p>
                       </Link>
                     )
                   })}
@@ -353,7 +411,7 @@ export default async function BlogPostPage({
                 Reviewed by
               </p>
               <p className="text-sm text-[#B7B0AA] leading-relaxed">
-                <strong className="text-[#F0EDE8]">{fallbackAuthor.reviewerName}</strong> — {fallbackAuthor.reviewerBio}
+                <strong className="text-[#F0EDE8]">CashClimb Review Desk</strong> — CashClimb articles are reviewed for clarity, usefulness, and responsible financial education.
               </p>
             </div>
 

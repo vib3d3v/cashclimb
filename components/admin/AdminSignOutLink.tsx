@@ -1,21 +1,23 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+
 export default function AdminSignOutLink() {
-  async function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
-    e.preventDefault()
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('cc-admin-key')
-      window.location.href = '/api/auth/logout'
-    }
+  const router = useRouter()
+
+  async function handleSignOut() {
+    await fetch('/api/admin/sign-out', { method: 'POST' }).catch(() => null)
+    router.push('/')
+    router.refresh()
   }
 
   return (
-    <a
-      href="/api/auth/logout"
-      onClick={handleClick}
-      className="block text-xs text-[#6A6460] hover:text-red-400 transition-colors text-center"
+    <button
+      type="button"
+      onClick={handleSignOut}
+      className="w-full rounded-lg border border-border px-3 py-2 text-left text-sm font-medium text-[#9A9490] transition-colors hover:border-gold hover:text-gold"
     >
       Sign out
-    </a>
+    </button>
   )
 }
