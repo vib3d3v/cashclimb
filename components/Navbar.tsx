@@ -13,7 +13,7 @@ export default function Navbar() {
     { href: '/blog', label: 'Articles' },
     { href: '/about', label: 'About' },
     { href: '/editorial-standards', label: 'Standards' },
-    { href: '/tools/compound-calculator', label: 'Tools' },
+    { href: '/tools', label: 'Tools' },
   ]
 
   return (
@@ -22,10 +22,14 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-2.5 group">
           <div
             className="w-8 h-8 bg-gold flex items-center justify-center text-bg font-black text-sm"
-            style={{ clipPath: 'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' }}
+            style={{
+              clipPath:
+                'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)',
+            }}
           >
             C
           </div>
+
           <span className="font-serif text-xl font-bold tracking-tight">
             Cash<span className="text-gold">Climb</span>
           </span>
@@ -65,6 +69,7 @@ export default function Navbar() {
           className="md:hidden text-[#F0EDE8] text-2xl"
           onClick={() => setOpen((o) => !o)}
           aria-label="Toggle menu"
+          type="button"
         >
           {open ? '✕' : '☰'}
         </button>
