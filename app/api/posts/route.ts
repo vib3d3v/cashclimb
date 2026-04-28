@@ -2,14 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import slugify from 'slugify'
 import readingTime from 'reading-time'
-import { getAutoAuthor } from '@/lib/seo-authors'
-
-function safeAuthor(author: unknown, category: string) {
-  const fallback = getAutoAuthor('cashclimb', category)
-  const value = typeof author === 'string' ? author : ''
-  if (!value || value.toLowerCase().includes('editorial')) return fallback.name
-  return value
-}
+import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
 
 export async function GET(req: NextRequest) {
   const supabase = createAdminClient()
@@ -36,20 +29,27 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const title = String(body.title ?? '').trim()
-  const excerpt = String(body.excerpt ?? '').trim()
-  const content = String(body.content ?? body.body ?? '').trim()
-  const category = String(body.category ?? 'Personal Finance').trim()
-  const published = Boolean(body.published)
+  const { title, excerpt, content, category, author, cover_url, published, seo_title, seo_description, primary_keyword } = body
 
-  if (!title || !excerpt || !content || !category) {
+  if (!title || !excerpt || !content || !category || !author) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  const slug = slugify(String(body.slug || title), { lower: true, strict: true })
-  const stats = readingTime(content.replace(/<[^>]*>/g, ''))
-  const supabase = createAdminClient()
+  const slug = slugify(title, { lower: true, strict: true })
+  const stats = readingTime(String(content).replace(/<[^>]*>/g, ''))
+  const evaluation = evaluateFinanceArticle({
+    title,
+    excerpt,
+    body: content,
+    primaryKeyword: primary_keyword ?? null,
+    category,
+    seoTitle: seo_title ?? null,
+    seoDescription: seo_description ?? null,
+    coverUrl: cover_url ?? null,
+  })
+  const status = published ? 'published' : nextStatusFromEvaluation(evaluation)
 
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('posts')
     .insert({
@@ -58,10 +58,15 @@ export async function POST(req: NextRequest) {
       excerpt,
       body: content,
       category,
-      author: safeAuthor(body.author, category),
-      cover_url: body.cover_url ?? null,
-      published,
-      status: published ? 'published' : 'draft',
+      author,
+      cover_url: cover_url ?? null,
+      seo_title: seo_title ?? null,
+      seo_description: seo_description ?? null,
+      primary_keyword: primary_keyword ?? null,
+      published: published ?? false,
+      status,
+      quality_score: evaluation.score,
+      risk_level: evaluation.risk_level,
       read_time: stats.text,
       published_at: published ? new Date().toISOString() : null,
     })
@@ -69,5 +74,14 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await supabase.from('quality_checks').insert({
+    post_id: data.id,
+    score: evaluation.score,
+    passed: evaluation.passed,
+    risk_level: evaluation.risk_level,
+    checks: evaluation.checks,
+  })
+
   return NextResponse.json(data, { status: 201 })
 }

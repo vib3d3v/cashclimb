@@ -1,46 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
-import { getAutoAuthor } from '@/lib/seo-authors'
+import readingTime from 'reading-time'
 
-function safeAuthor(author: unknown, category: string) {
-  const fallback = getAutoAuthor('cashclimb', category)
-  const value = typeof author === 'string' ? author : ''
-  if (!value || value.toLowerCase().includes('editorial')) return fallback.name
-  return value
+function isAdmin(req: NextRequest) {
+  return req.headers.get('x-admin-key') === process.env.ADMIN_PASSWORD
 }
 
+// GET /api/posts/[id]
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createAdminClient()
-  const { data, error } = await supabase.from('posts').select('*').eq('id', params.id).maybeSingle()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('id', params.id)
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 404 })
   return NextResponse.json(data)
 }
 
+// PATCH /api/posts/[id] — update post
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = req.headers.get('x-admin-key')
-  if (auth !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!isAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const category = String(body.category ?? 'Personal Finance')
-  const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  const updates: Record<string, unknown> = { ...body }
 
-  for (const key of ['title', 'slug', 'excerpt', 'body', 'category', 'cover_url', 'published']) {
-    if (key in body) update[key] = body[key]
+  if (body.content) {
+    updates.body = body.content
+    delete updates.content
+    updates.read_time = readingTime(body.content.replace(/<[^>]*>/g, '')).text
   }
-
-  if ('author' in body) update.author = safeAuthor(body.author, category)
 
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('posts')
-    .update(update)
+    .update(updates)
     .eq('id', params.id)
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
+}
+
+// DELETE /api/posts/[id]
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  if (!isAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('posts').delete().eq('id', params.id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
 }

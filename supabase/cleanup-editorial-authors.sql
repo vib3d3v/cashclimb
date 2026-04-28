@@ -1,4 +1,6 @@
--- Run this once in Supabase SQL Editor if any old posts still store CashClimb Editorial.
+-- Run this once in Supabase SQL Editor for CashClimb.
+-- It replaces old editorial authors with person authors while keeping all rows valid.
+
 update posts
 set author = case
   when lower(coalesce(category, '')) like '%side hustle%' then 'Daniel Reeves'
@@ -7,9 +9,5 @@ set author = case
   when lower(coalesce(category, '')) like '%personal finance%' then 'Daniel Reeves'
   else 'Sophie Tran'
 end
-where author ilike '%editorial%';
-
-select title, category, author
-from posts
-where author ilike '%editorial%'
-order by updated_at desc nulls last, created_at desc;
+where author is null
+   or author ilike '%editorial%';

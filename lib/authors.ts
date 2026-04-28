@@ -13,13 +13,13 @@ export type AuthorProfile = {
 export const AUTHORS: AuthorProfile[] = [
   {
     slug: 'cashclimb-editorial',
-    name: 'CashClimb Review Desk',
+    name: 'CashClimb Editorial',
     role: 'Editorial Team',
     tagline: 'Research-backed financial guides for everyday readers.',
     intro:
-      'The CashClimb review team creates clear, practical financial education to help readers save money, compare options, and make better everyday money decisions.',
+      'The CashClimb Editorial team creates clear, practical financial education to help readers save money, compare options, and make better everyday money decisions.',
     bio: [
-      'The CashClimb Review Desk is the in-house team behind CashClimb’s guides, tools, and financial resources. Our goal is to make money management easier, clearer, and more practical for everyday readers.',
+      'CashClimb Editorial is the in-house team behind CashClimb’s guides, tools, and financial resources. Our goal is to make money management easier, clearer, and more practical for everyday readers.',
       'We research and simplify topics like saving, budgeting, banking, debt, credit, investing basics, and income growth. Our editorial approach focuses on clarity, usefulness, and responsible financial framing.',
       'CashClimb content is educational only and should not be treated as personal financial advice. Readers should consider their own situation and speak with a qualified professional before making major financial decisions.',
     ],

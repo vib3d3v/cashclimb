@@ -1082,7 +1082,7 @@ async function humanizeArticle(
     seoTitle: parsed.seoTitle?.trim() || article.seoTitle,
     seoDescription: parsed.seoDescription?.trim() || article.seoDescription,
     contentHtml: parsed.contentHtml.trim(),
-    author: parsed.author?.trim() || AUTHOR_NAME,
+    author: parsed.author?.trim() || article.author || AUTHOR_NAME,
   }
 }
 

@@ -486,7 +486,7 @@ export async function humanizeExistingPost(post: EditablePost): Promise<Rewritte
     seoTitle: parsed?.seoTitle?.trim() || post.seo_title || post.title,
     seoDescription: parsed?.seoDescription?.trim() || post.seo_description || post.excerpt,
     contentHtml,
-    author: parsed?.author?.trim() || AUTHOR_NAME,
+    author: parsed?.author?.trim() || post.author || AUTHOR_NAME,
   }
 }
 
@@ -503,7 +503,7 @@ export async function refreshExistingPost(post: EditablePost): Promise<Rewritten
     seoTitle: parsed?.seoTitle?.trim() || post.seo_title || post.title,
     seoDescription: parsed?.seoDescription?.trim() || post.seo_description || post.excerpt,
     contentHtml,
-    author: parsed?.author?.trim() || AUTHOR_NAME,
+    author: parsed?.author?.trim() || post.author || AUTHOR_NAME,
   }
 }
 
@@ -540,6 +540,6 @@ export async function improveFailedChecks(
     seoTitle: parsed?.seoTitle?.trim() || metadata.seoTitle,
     seoDescription: parsed?.seoDescription?.trim() || metadata.seoDescription,
     contentHtml,
-    author: AUTHOR_NAME,
+    author: post.author || AUTHOR_NAME,
   }
 }
