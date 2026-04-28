@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     'Clear, jargon-free financial insights on investing, personal finance, credit, and wealth-building for people who take their financial future seriously.',
   keywords: ['personal finance', 'investing', 'wealth building', 'budgeting', 'financial independence'],
   applicationName: 'CashClimb',
-  authors: [{ name: 'Daniel Reeves' }, { name: 'Sophie Tran' }],
+  authors: [{ name: 'CashClimb Editorial' }],
   creator: 'CashClimb',
   publisher: 'CashClimb',
   robots: { index: true, follow: true },

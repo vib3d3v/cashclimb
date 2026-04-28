@@ -25,7 +25,7 @@ export function getAutoAuthor(site: SiteKey, category?: string): AutoAuthor {
         role: 'Personal Finance Writer',
         bio: 'Daniel Reeves writes practical money advice focused on better habits, stronger savings, and realistic ways to increase income.',
         initials: 'DR',
-        reviewerName: 'CashClimb Review Desk',
+        reviewerName: 'CashClimb Editorial',
         reviewerRole: 'Editorial Review Team',
         reviewerBio: 'CashClimb articles are reviewed for clarity, usefulness, and responsible financial education. Content is informational only and is not personal financial advice.',
       }
@@ -36,7 +36,7 @@ export function getAutoAuthor(site: SiteKey, category?: string): AutoAuthor {
       role: 'Finance Writer',
       bio: 'Sophie Tran covers budgeting, digital banking, and simple financial systems that help readers stay organized and in control.',
       initials: 'ST',
-      reviewerName: 'CashClimb Review Desk',
+      reviewerName: 'CashClimb Editorial',
       reviewerRole: 'Editorial Review Team',
       reviewerBio: 'CashClimb articles are reviewed for clarity, usefulness, and responsible financial education. Content is informational only and is not personal financial advice.',
     }

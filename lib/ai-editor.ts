@@ -1,4 +1,5 @@
 import type { Category, WorkflowCheck } from '@/types'
+import { resolvePostAuthorName } from '@/lib/authors'
 
 type EditablePost = {
   id: string
@@ -338,7 +339,7 @@ Return ONLY valid JSON with this shape:
   "seoTitle": "string",
   "seoDescription": "string",
   "contentHtml": "string",
-  "author": "Daniel Reeves"
+  "author": "CashClimb Editorial"
 }
 
 Goals:
@@ -372,7 +373,7 @@ Return ONLY valid JSON with this shape:
   "seoTitle": "string",
   "seoDescription": "string",
   "contentHtml": "string",
-  "author": "Daniel Reeves"
+  "author": "CashClimb Editorial"
 }
 
 Goals:
@@ -486,7 +487,7 @@ export async function humanizeExistingPost(post: EditablePost): Promise<Rewritte
     seoTitle: parsed?.seoTitle?.trim() || post.seo_title || post.title,
     seoDescription: parsed?.seoDescription?.trim() || post.seo_description || post.excerpt,
     contentHtml,
-    author: parsed?.author?.trim() || post.author || AUTHOR_NAME,
+    author: resolvePostAuthorName({ title: parsed?.title?.trim() || post.title, category: post.category, author: parsed?.author?.trim() || post.author || AUTHOR_NAME }),
   }
 }
 
@@ -503,7 +504,7 @@ export async function refreshExistingPost(post: EditablePost): Promise<Rewritten
     seoTitle: parsed?.seoTitle?.trim() || post.seo_title || post.title,
     seoDescription: parsed?.seoDescription?.trim() || post.seo_description || post.excerpt,
     contentHtml,
-    author: parsed?.author?.trim() || post.author || AUTHOR_NAME,
+    author: resolvePostAuthorName({ title: parsed?.title?.trim() || post.title, category: post.category, author: parsed?.author?.trim() || post.author || AUTHOR_NAME }),
   }
 }
 
@@ -540,6 +541,6 @@ export async function improveFailedChecks(
     seoTitle: parsed?.seoTitle?.trim() || metadata.seoTitle,
     seoDescription: parsed?.seoDescription?.trim() || metadata.seoDescription,
     contentHtml,
-    author: post.author || AUTHOR_NAME,
+    author: resolvePostAuthorName({ title: metadata.title, category: post.category, author: post.author || AUTHOR_NAME }),
   }
 }

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase-server'
 import slugify from 'slugify'
 import readingTime from 'reading-time'
 import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
+import { resolvePostAuthorName } from '@/lib/authors'
 
 export async function GET(req: NextRequest) {
   const supabase = createAdminClient()
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { title, excerpt, content, category, author, cover_url, published, seo_title, seo_description, primary_keyword } = body
 
-  if (!title || !excerpt || !content || !category || !author) {
+  if (!title || !excerpt || !content || !category) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
       excerpt,
       body: content,
       category,
-      author,
+      author: resolvePostAuthorName({ title, category, author }),
       cover_url: cover_url ?? null,
       seo_title: seo_title ?? null,
       seo_description: seo_description ?? null,

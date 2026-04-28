@@ -8,7 +8,7 @@ import { notFound } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { createAdminClient } from '@/lib/supabase-server'
-import { getAuthorByName } from '@/lib/authors'
+import { getAuthorByName, resolvePostAuthorName } from '@/lib/authors'
 import { getAutoAuthor } from '@/lib/seo-authors'
 import type { Post } from '@/types'
 
@@ -21,16 +21,6 @@ function formatDate(date?: string) {
     month: 'long',
     day: 'numeric',
   })
-}
-
-function resolveAuthorName(post: Post) {
-  const fallbackAuthor = getAutoAuthor('cashclimb', post.category)
-
-  if (!post.author || post.author.toLowerCase().includes('editorial')) {
-    return fallbackAuthor.name
-  }
-
-  return post.author
 }
 
 async function getPost(slug: string) {
@@ -107,7 +97,7 @@ export default async function BlogPostPage({
   if (!post) notFound()
 
   const fallbackAuthor = getAutoAuthor('cashclimb', post.category)
-  const authorName = resolveAuthorName(post)
+  const authorName = resolvePostAuthorName(post)
   const author = getAuthorByName(authorName)
   const relatedPosts = await getRelatedPosts(post)
   const articleUrl = `${siteUrl}/blog/${post.slug}`
@@ -307,7 +297,7 @@ export default async function BlogPostPage({
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {relatedPosts.map((item) => {
-                    const relatedAuthorName = resolveAuthorName(item)
+                    const relatedAuthorName = resolvePostAuthorName(item)
                     const relatedAuthor = getAuthorByName(relatedAuthorName)
 
                     return (

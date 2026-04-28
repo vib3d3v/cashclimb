@@ -1,4 +1,4 @@
-# CashClimb Review Desk Workflow Upgrade
+# CashClimb Editorial Workflow Upgrade
 
 This upgrade adds a review-first finance publishing workflow on top of the existing CashClimb blog generator.
 

@@ -89,7 +89,7 @@ index ca005f0..9842075 100644
 +              <div>
 +                <div className="text-[#6A6460] mb-1">Written by</div>
 +                <div className="text-[#F0EDE8] font-semibold">
-+                  {post.author || 'CashClimb Review Desk'}
++                  {post.author || 'CashClimb Editorial'}
 +                </div>
 +              </div>
 +
@@ -452,7 +452,7 @@ index 49fba96..754986d 100644
 +                  <div className="bg-bg border border-border rounded-xl p-4">
 +                    <div className="text-[#6A6460] mb-1">Author</div>
 +                    <div className="text-[#F0EDE8] font-semibold">
-+                      {featured.author || 'CashClimb Review Desk'}
++                      {featured.author || 'CashClimb Editorial'}
 +                    </div>
 +                  </div>
 +                  <div className="bg-bg border border-border rounded-xl p-4">
@@ -601,7 +601,7 @@ index 49fba96..754986d 100644
 +
 +              <div className="flex gap-4 text-sm flex-wrap mb-6">
 +                <span className="text-[#9A9490]">
-+                  By {featured.author || 'CashClimb Review Desk'}
++                  By {featured.author || 'CashClimb Editorial'}
 +                </span>
 +                <span className="text-[#6A6460]">
 +                  Updated {formatDate(featured.updated_at || featured.created_at)}
@@ -803,7 +803,7 @@ index 49fba96..754986d 100644
 +          <div className="grid md:grid-cols-3 gap-6">
 +            {[
 +              {
-+                name: 'CashClimb Review Desk',
++                name: 'CashClimb Editorial',
 +                role: 'Investing & Personal Finance',
 +                bio: 'Focused on practical investing, debt, and wealth-building guidance written for clarity.',
 +              },
@@ -1182,7 +1182,7 @@ index 54cad48..b154c86 100644
  
  export default function PostCard({ post }: { post: Post }) {
    const color = CAT_COLORS[post.category] ?? '#888'
-+  const author = post.author || 'CashClimb Review Desk'
++  const author = post.author || 'CashClimb Editorial'
  
    return (
      <Link href={`/blog/${post.slug}`} className="post-card flex flex-col group">

@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { getAuthorByName } from '@/lib/authors'
-import { getAutoAuthor } from '@/lib/seo-authors'
+import { getAuthorByName, resolvePostAuthorName } from '@/lib/authors'
 import type { Post } from '@/types'
 
 const CAT_COLORS: Record<string, string> = {
@@ -40,19 +39,9 @@ function getUseCase(category: string) {
   }
 }
 
-function resolveAuthorName(post: Post) {
-  const fallbackAuthor = getAutoAuthor('cashclimb', post.category)
-
-  if (!post.author || post.author.toLowerCase().includes('editorial')) {
-    return fallbackAuthor.name
-  }
-
-  return post.author
-}
-
 export default function PostCard({ post }: { post: Post }) {
   const color = CAT_COLORS[post.category] ?? '#888'
-  const author = getAuthorByName(resolveAuthorName(post))
+  const author = getAuthorByName(resolvePostAuthorName(post))
 
   return (
     <article className="post-card flex flex-col group overflow-hidden">

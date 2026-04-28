@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
 import { requireAdmin } from '@/lib/admin-guard'
 import type { Category } from '@/types'
+import { resolvePostAuthorName } from '@/lib/authors'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -858,7 +859,7 @@ Return ONLY valid JSON in this exact shape:
   "seoTitle": "string",
   "seoDescription": "string",
   "contentHtml": "string",
-  "author": "Daniel Reeves"
+  "author": "CashClimb Editorial"
 }
 
 Article strategy:
@@ -977,7 +978,7 @@ async function generateArticle(
     seoTitle: parsed.seoTitle.trim(),
     seoDescription: parsed.seoDescription.trim(),
     contentHtml: parsed.contentHtml.trim(),
-    author: parsed.author?.trim() || AUTHOR_NAME,
+    author: resolvePostAuthorName({ title: parsed.title?.trim() || plan.workingTitle, category, author: parsed.author?.trim() || AUTHOR_NAME }),
   }
 }
 
@@ -1008,7 +1009,7 @@ Return ONLY valid JSON in this exact shape:
   "seoTitle": "string",
   "seoDescription": "string",
   "contentHtml": "string",
-  "author": "Daniel Reeves"
+  "author": "CashClimb Editorial"
 }
 
 Article context:
@@ -1082,7 +1083,7 @@ async function humanizeArticle(
     seoTitle: parsed.seoTitle?.trim() || article.seoTitle,
     seoDescription: parsed.seoDescription?.trim() || article.seoDescription,
     contentHtml: parsed.contentHtml.trim(),
-    author: parsed.author?.trim() || article.author || AUTHOR_NAME,
+    author: resolvePostAuthorName({ title: parsed.title?.trim() || article.title, category, author: parsed.author?.trim() || article.author || AUTHOR_NAME }),
   }
 }
 

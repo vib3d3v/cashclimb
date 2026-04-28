@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import readingTime from 'reading-time'
+import { resolvePostAuthorName } from '@/lib/authors'
 
 function isAdmin(req: NextRequest) {
   return req.headers.get('x-admin-key') === process.env.ADMIN_PASSWORD
@@ -25,6 +26,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const body = await req.json()
   const updates: Record<string, unknown> = { ...body }
+
+  if (body.title || body.category || body.author) {
+    updates.author = resolvePostAuthorName({ title: body.title, category: body.category, author: body.author })
+  }
 
   if (body.content) {
     updates.body = body.content
