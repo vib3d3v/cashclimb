@@ -23,16 +23,6 @@ function formatDate(date?: string) {
   })
 }
 
-function resolveAuthorName(post: Post) {
-  const fallbackAuthor = getAutoAuthor('cashclimb', post.category)
-
-  if (!post.author || post.author.toLowerCase().includes('editorial')) {
-    return fallbackAuthor.name
-  }
-
-  return post.author
-}
-
 async function getPost(slug: string) {
   const supabase = createAdminClient()
 
@@ -107,7 +97,12 @@ export default async function BlogPostPage({
   if (!post) notFound()
 
   const fallbackAuthor = getAutoAuthor('cashclimb', post.category)
-  const authorName = resolveAuthorName(post)
+
+  const authorName =
+    !post.author || post.author.toLowerCase().includes('editorial')
+      ? fallbackAuthor.name
+      : post.author
+
   const author = getAuthorByName(authorName)
   const relatedPosts = await getRelatedPosts(post)
   const articleUrl = `${siteUrl}/blog/${post.slug}`
@@ -306,31 +301,23 @@ export default async function BlogPostPage({
                   Related guides
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {relatedPosts.map((item) => {
-                    const relatedAuthorName = resolveAuthorName(item)
-                    const relatedAuthor = getAuthorByName(relatedAuthorName)
-
-                    return (
-                      <Link
-                        key={item.id}
-                        href={`/blog/${item.slug}`}
-                        className="rounded-2xl border border-border bg-bg-2 p-5 hover:border-gold transition-colors"
-                      >
-                        <p className="text-xs text-gold font-bold mb-2">
-                          {item.category}
-                        </p>
-                        <h3 className="text-[#F0EDE8] font-bold leading-snug">
-                          {item.title}
-                        </h3>
-                        <p className="text-sm text-[#9A9490] mt-3 line-clamp-3">
-                          {item.excerpt}
-                        </p>
-                        <p className="text-xs text-[#6A6460] mt-4">
-                          By {relatedAuthor.name}
-                        </p>
-                      </Link>
-                    )
-                  })}
+                  {relatedPosts.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/blog/${item.slug}`}
+                      className="rounded-2xl border border-border bg-bg-2 p-5 hover:border-gold transition-colors"
+                    >
+                      <p className="text-xs text-gold font-bold mb-2">
+                        {item.category}
+                      </p>
+                      <h3 className="text-[#F0EDE8] font-bold leading-snug">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-[#9A9490] mt-3 line-clamp-3">
+                        {item.excerpt}
+                      </p>
+                    </Link>
+                  ))}
                 </div>
               </section>
             ) : null}
