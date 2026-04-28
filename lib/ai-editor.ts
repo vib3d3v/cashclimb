@@ -27,7 +27,7 @@ type RelatedLink = {
   slug: string
 }
 
-const AUTHOR_NAME = 'Daniel Reeves'
+const AUTHOR_NAME = 'CashClimb Editorial'
 
 const TOOL_BLOCKS: Record<string, string[]> = {
   'Personal Finance': [
@@ -338,7 +338,7 @@ Return ONLY valid JSON with this shape:
   "seoTitle": "string",
   "seoDescription": "string",
   "contentHtml": "string",
-  "author": "Daniel Reeves"
+  "author": "CashClimb Editorial"
 }
 
 Goals:
@@ -372,7 +372,7 @@ Return ONLY valid JSON with this shape:
   "seoTitle": "string",
   "seoDescription": "string",
   "contentHtml": "string",
-  "author": "Daniel Reeves"
+  "author": "CashClimb Editorial"
 }
 
 Goals:

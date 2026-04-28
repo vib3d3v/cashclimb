@@ -66,14 +66,10 @@ export function getAuthorBySlug(slug: string) {
 }
 
 export function getAuthorByName(name?: string) {
-  const normalized = (name || 'Daniel Reeves').trim().toLowerCase()
-
-  if (!normalized || normalized.includes('editorial')) {
-    return AUTHORS.find((author) => author.slug === 'daniel-reeves')!
-  }
+  const normalized = (name || 'CashClimb Editorial').trim().toLowerCase()
 
   return (
     AUTHORS.find((author) => author.name.toLowerCase() === normalized) ||
-    AUTHORS.find((author) => author.slug === 'daniel-reeves')!
+    AUTHORS.find((author) => author.slug === 'cashclimb-editorial')!
   )
 }

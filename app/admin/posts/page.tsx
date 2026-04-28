@@ -5,7 +5,6 @@ import { createAdminClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import DeletePostButton from '@/components/DeletePostButton'
 import EditorialActionButtons from '@/components/admin/EditorialActionButtons'
-import { getAutoAuthor } from '@/lib/seo-authors'
 
 type PostRow = {
   id: string
@@ -19,16 +18,6 @@ type PostRow = {
   risk_level: 'low' | 'medium' | 'high' | null
   view_count: number | null
   created_at: string | null
-}
-
-function resolveAuthorName(post: { author: string | null; category: string | null }) {
-  const fallbackAuthor = getAutoAuthor('cashclimb', post.category || undefined)
-
-  if (!post.author || post.author.toLowerCase().includes('editorial')) {
-    return fallbackAuthor.name
-  }
-
-  return post.author
 }
 
 function formatDate(date: string | null) {
@@ -116,7 +105,7 @@ function PostsTable({
               </td>
 
               <td className="px-5 py-4 text-xs text-[#9A9490]">
-                {resolveAuthorName(p)}
+                {p.author || '—'}
               </td>
 
               <td className="px-5 py-4 text-xs text-[#9A9490]">

@@ -35,7 +35,7 @@ export default function NewPostPage() {
     title: '',
     excerpt: '',
     category: 'Investing',
-    author: 'Daniel Reeves',
+    author: '',
   })
   const [content, setContent] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
