@@ -75,8 +75,11 @@ export default async function AdminPostsPage() {
                         {post.published ? (
                           <Link href={`/blog/${post.slug}`} className="rounded-full border border-border px-3 py-1 text-xs text-[#F0EDE8] hover:border-gold">View</Link>
                         ) : (
-                          <span className="rounded-full border border-border px-3 py-1 text-xs text-[#6A6460]">Draft</span>
+                          <Link href={`/admin/posts/${post.id}/preview`} className="rounded-full border border-border px-3 py-1 text-xs text-[#F0EDE8] hover:border-gold">Preview</Link>
                         )}
+                        <form action={`/api/admin/posts/${post.id}/delete`} method="POST">
+                          <button className="rounded-full border border-red-400/30 px-3 py-1 text-xs text-red-300 hover:border-red-300">Delete</button>
+                        </form>
                       </div>
                     </td>
                   </tr>
