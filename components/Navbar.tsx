@@ -22,14 +22,10 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-2.5 group">
           <div
             className="w-8 h-8 bg-gold flex items-center justify-center text-bg font-black text-sm"
-            style={{
-              clipPath:
-                'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)',
-            }}
+            style={{ clipPath: 'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' }}
           >
             C
           </div>
-
           <span className="font-serif text-xl font-bold tracking-tight">
             Cash<span className="text-gold">Climb</span>
           </span>
@@ -41,9 +37,7 @@ export default function Navbar() {
               key={link.href}
               href={link.href}
               className={`text-sm font-medium tracking-wide transition-colors ${
-                pathname === link.href
-                  ? 'text-gold'
-                  : 'text-[#9A9490] hover:text-gold'
+                pathname === link.href ? 'text-gold' : 'text-[#9A9490] hover:text-gold'
               }`}
             >
               {link.label}
@@ -51,10 +45,10 @@ export default function Navbar() {
           ))}
 
           <Link
-            href="/admin/keywords"
+            href="/admin/login?from=%2Fadmin"
             className="text-xs font-bold tracking-widest uppercase border border-border px-4 py-2 rounded text-[#9A9490] hover:text-gold hover:border-gold transition-all"
           >
-            Write
+            Editor Login
           </Link>
 
           <Link
@@ -71,7 +65,7 @@ export default function Navbar() {
           aria-label="Toggle menu"
           type="button"
         >
-          {open ? '✕' : '☰'}
+          {open ? 'x' : '☰'}
         </button>
       </div>
 
@@ -89,11 +83,11 @@ export default function Navbar() {
           ))}
 
           <Link
-            href="/admin/keywords"
+            href="/admin/login?from=%2Fadmin"
             onClick={() => setOpen(false)}
             className="text-sm font-medium text-[#9A9490] hover:text-gold transition-colors"
           >
-            Write Article
+            Editor Login
           </Link>
 
           <Link

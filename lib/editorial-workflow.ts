@@ -45,8 +45,8 @@ const CONTENT_RULES: Array<{
   },
 ]
 
-function stripHtml(html: string) {
-  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+function stripHtml(html: any = '') {
+  return String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 function buildCheck(
@@ -91,16 +91,16 @@ export function evaluateFinanceArticle(input: {
   const words = plainText.split(/\s+/).filter(Boolean)
   const h2Count = (input.body.match(/<h2\b/gi) || []).length
   const faqMatch = /<h2[^>]*>\s*(faq|frequently asked questions)\s*<\/h2>/i.test(input.body)
-  const internalLinks = (input.body.match(/href="\/blog\//gi) || []).length
+  const internalLinks = (input.body.match(/href="\/blog(?:\/|\?|"|#)/gi) || []).length
   const hasConclusion = /what you can do next|next steps|in summary|the bottom line|final thoughts/i.test(
     plainText
   )
   const hasExamples = /for example|for instance|let'?s say|imagine that|suppose you/i.test(plainText)
-  const hasTakeaways = /<h2>\s*key takeaways\s*<\/h2>/i.test(input.body) && /<ul>[\s\S]*<\/ul>/i.test(input.body)
+  const hasTakeaways = /<h2[^>]*>\s*key takeaways\s*<\/h2>/i.test(input.body) && /<ul>[\s\S]*?<\/ul>/i.test(input.body)
   const lengths = sentenceLengths(plainText)
   const variedSentenceRhythm = hasSentenceVariety(lengths)
   const readerAwareLanguage = /\byou\b|\byour\b/i.test(plainText)
-  const roboticPhrasing = /when it comes to|in today's world|navigating the|delve into|it is important to note|in conclusion,? this article/i.test(plainText)
+  const roboticPhrasing = /when it comes to|in today's world|navigating the|delve into|it is important to note that|in conclusion,? this article/i.test(plainText)
 
   checks.push(
     buildCheck(
@@ -261,7 +261,13 @@ export function evaluateFinanceArticle(input: {
 
   for (const rule of CONTENT_RULES) {
     if (rule.name === 'Disclaimer included when needed' && !disclaimerNeeded) continue
-    const matched = rule.pattern.test(plainText)
+    const textForRule = rule.name === 'Avoids advisory phrasing'
+      ? plainText
+          .replace(/not personal financial, investment, tax, or legal advice/gi, ' ')
+          .replace(/not (financial|investment|tax|legal) advice/gi, ' ')
+          .replace(/general (financial|investment|tax|legal) education/gi, ' ')
+      : plainText
+    const matched = rule.pattern.test(textForRule)
     checks.push(buildCheck(rule.name, rule.shouldMatch ? matched : !matched, rule.details, rule.severity))
   }
 

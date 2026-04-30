@@ -1,77 +1,41 @@
 export const dynamic = 'force-dynamic'
 
-import { createAdminClient } from '@/lib/supabase-server'
-import KeywordGeneratorPanel from '@/components/admin/KeywordGeneratorPanel'
+import AutomationPanel from '@/components/admin/AutomationPanel'
 import KeywordRowActions from '@/components/admin/KeywordRowActions'
+import { createAdminClient } from '@/lib/supabase-server'
 
-type KeywordRow = {
-  id: string
-  keyword: string
-  category?: string | null
-  status?: string | null
-  priority?: number | null
-  created_at?: string | null
-}
-
-export default async function AdminKeywordsPage() {
+export default async function KeywordsPage() {
   const supabase = createAdminClient()
-  const { data, error } = await supabase
-    .from('keyword_queue')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100)
-
-  const keywords = (data ?? []) as KeywordRow[]
+  const { data: keywords } = await supabase.from('keyword_queue').select('*').order('status', { ascending: true }).order('priority', { ascending: true }).limit(100)
 
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-xs uppercase tracking-widest text-gold font-bold mb-2">Keywords</p>
-        <h1 className="font-serif text-4xl font-black text-[#F0EDE8]">Keyword queue</h1>
-        <p className="mt-3 max-w-2xl text-[#9A9490]">
-          Generate article ideas, queue topics, and draft the next CashClimb guides.
-        </p>
+        <p className="text-xs font-bold uppercase tracking-widest text-gold">Admin</p>
+        <h1 className="mt-2 font-serif text-4xl font-black text-[#F0EDE8]">Keywords</h1>
+        <p className="mt-2 text-[#9A9490]">Queue keyword ideas, then generate safe draft articles from the best opportunities.</p>
       </div>
 
-      <KeywordGeneratorPanel />
+      <AutomationPanel />
 
-      <section className="rounded-2xl border border-border bg-bg-2 overflow-hidden">
-        <div className="border-b border-border px-5 py-4">
-          <p className="text-xs uppercase tracking-widest text-gold font-bold">Queued keywords</p>
+      <section className="overflow-hidden rounded-2xl border border-border bg-bg-2">
+        <div className="grid grid-cols-[1fr_130px_120px_130px] gap-4 border-b border-border px-5 py-3 text-xs font-bold uppercase tracking-widest text-[#6A6460]">
+          <span>Keyword</span><span>Category</span><span>Status</span><span>Action</span>
         </div>
-
-        {error ? (
-          <div className="p-6 text-sm text-[#9A9490]">
-            Keyword queue table is not available yet. Create or connect <code className="text-gold">keyword_queue</code> in Supabase to use this section.
-          </div>
-        ) : keywords.length ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-border text-xs uppercase tracking-widest text-[#6A6460]">
-                <tr>
-                  <th className="px-5 py-4">Keyword</th>
-                  <th className="px-5 py-4">Category</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Priority</th>
-                  <th className="px-5 py-4">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {keywords.map((row) => (
-                  <tr key={row.id} className="border-b border-border last:border-b-0">
-                    <td className="px-5 py-4 font-semibold text-[#F0EDE8]">{row.keyword}</td>
-                    <td className="px-5 py-4 text-[#9A9490]">{row.category || '—'}</td>
-                    <td className="px-5 py-4 text-[#9A9490]">{row.status || 'queued'}</td>
-                    <td className="px-5 py-4 text-[#9A9490]">{row.priority ?? '—'}</td>
-                    <td className="px-5 py-4"><KeywordRowActions keywordId={row.id} keyword={row.keyword} status={row.status || 'queued'} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="p-6 text-sm text-[#9A9490]">No keywords queued yet.</div>
-        )}
+        <div className="divide-y divide-border">
+          {(keywords ?? []).map((item: any) => (
+            <div key={item.id} className="grid grid-cols-[1fr_130px_120px_130px] gap-4 px-5 py-4">
+              <div>
+                <p className="font-semibold text-[#F0EDE8]">{item.keyword}</p>
+                <p className="mt-1 text-xs text-[#6A6460]">{item.intent} · priority {item.priority}</p>
+              </div>
+              <p className="text-sm text-[#9A9490]">{item.category}</p>
+              <p className="text-sm text-[#9A9490]">{item.status}</p>
+              <KeywordRowActions keywordId={item.id} keyword={item.keyword} status={item.status} />
+            </div>
+          ))}
+          {!(keywords ?? []).length ? <div className="px-5 py-10 text-center text-[#9A9490]">No keywords queued yet.</div> : null}
+        </div>
       </section>
     </div>
   )

@@ -2,69 +2,91 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase-server'
-import type { Post, Comment } from '@/types'
 
-export default async function AdminAnalyticsPage() {
+function pct(value: number, total: number) {
+  if (!total) return '0%'
+  return `${Math.round((value / total) * 100)}%`
+}
+
+function formatDate(value?: string | null) {
+  return value ? new Date(value).toLocaleDateString() : '-'
+}
+
+export default async function AnalyticsPage() {
   const supabase = createAdminClient()
-  const [{ data: postRows }, { data: commentRows }] = await Promise.all([
-    supabase.from('posts').select('*').order('view_count', { ascending: false }),
-    supabase.from('comments').select('*').order('created_at', { ascending: false }),
+
+  const [postsResult, keywordsResult, runsResult] = await Promise.all([
+    supabase.from('posts').select('id,title,slug,published,status,quality_score,risk_level,created_at,updated_at').order('created_at', { ascending: false }).limit(100),
+    supabase.from('keyword_queue').select('id,keyword,status,priority,created_at').order('created_at', { ascending: false }).limit(100),
+    supabase.from('generation_runs').select('id,type,status,created_at').order('created_at', { ascending: false }).limit(20),
   ])
 
-  const posts = (postRows ?? []) as Post[]
-  const comments = (commentRows ?? []) as Comment[]
-  const totalViews = posts.reduce((sum, post) => sum + Number(post.view_count ?? 0), 0)
-  const topPosts = posts.slice(0, 10)
-  const categoryViews = posts.reduce<Record<string, number>>((acc, post) => {
-    acc[post.category] = (acc[post.category] ?? 0) + Number(post.view_count ?? 0)
-    return acc
-  }, {})
+  const posts = postsResult.data ?? []
+  const keywords = keywordsResult.data ?? []
+  const runs = runsResult.data ?? []
+
+  const published = posts.filter((post: any) => post.published).length
+  const drafts = posts.length - published
+  const passed = posts.filter((post: any) => Number(post.quality_score ?? 0) >= 80).length
+  const queuedKeywords = keywords.filter((keyword: any) => keyword.status === 'queued').length
+
+  const cards = [
+    { label: 'Posts tracked', value: posts.length, note: `${published} published, ${drafts} drafts` },
+    { label: 'SEO pass rate', value: pct(passed, posts.length), note: 'Posts scoring 80+' },
+    { label: 'Keywords', value: keywords.length, note: `${queuedKeywords} still queued` },
+    { label: 'Automation runs', value: runs.length, note: 'Recent generation activity' },
+  ]
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-xs uppercase tracking-widest text-gold font-bold mb-2">Analytics</p>
-        <h1 className="font-serif text-4xl font-black text-[#F0EDE8]">Site analytics</h1>
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-gold">Admin</p>
+          <h1 className="mt-2 font-serif text-4xl font-black text-[#F0EDE8]">Analytics</h1>
+          <p className="mt-2 text-[#9A9490]">A simple admin health view for posts, keywords, quality scores, and automation activity.</p>
+        </div>
+        <div className="flex gap-3">
+          <Link href="/admin/automation" className="cc-btn-ghost">Automation</Link>
+          <Link href="/admin/posts" className="cc-btn-primary">Posts</Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          ['Total views', totalViews.toLocaleString()],
-          ['Published posts', posts.filter((post) => post.published).length],
-          ['Comments', comments.length],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-border bg-bg-2 p-5">
-            <p className="text-xs uppercase tracking-widest text-[#6A6460] font-bold">{label}</p>
-            <p className="text-4xl font-serif font-black mt-2 text-[#F0EDE8]">{value}</p>
+      {(postsResult.error || keywordsResult.error || runsResult.error) ? (
+        <section className="rounded-2xl border border-border bg-bg-2 p-5 text-sm text-[#9A9490]">
+          <p className="font-semibold text-[#F0EDE8]">Some analytics data could not load.</p>
+          <p className="mt-2">If this is a fresh install, run the automation Supabase migration first. The page will still load with the data that is available.</p>
+        </section>
+      ) : null}
+
+      <section className="grid gap-4 md:grid-cols-4">
+        {cards.map((card) => (
+          <div key={card.label} className="rounded-2xl border border-border bg-bg-2 p-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#6A6460]">{card.label}</p>
+            <div className="mt-3 text-3xl font-black text-[#F0EDE8]">{card.value}</div>
+            <p className="mt-2 text-sm text-[#9A9490]">{card.note}</p>
           </div>
         ))}
-      </div>
+      </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-border bg-bg-2 overflow-hidden">
-          <div className="border-b border-border px-5 py-4"><p className="text-xs uppercase tracking-widest text-gold font-bold">Top posts</p></div>
-          <div className="divide-y divide-border">
-            {topPosts.map((post) => (
-              <Link key={post.id} href={`/admin/posts/${post.id}/edit`} className="block px-5 py-4 hover:bg-bg-3">
+      <section className="overflow-hidden rounded-2xl border border-border bg-bg-2">
+        <div className="border-b border-border px-5 py-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-gold">Recent content</p>
+        </div>
+        <div className="divide-y divide-border">
+          {posts.slice(0, 10).map((post: any) => (
+            <Link key={post.id} href={`/admin/posts/${post.id}/edit`} className="grid gap-2 px-5 py-4 hover:bg-bg-3 md:grid-cols-[minmax(0,1fr)_120px_120px_120px]">
+              <div>
                 <p className="font-semibold text-[#F0EDE8]">{post.title}</p>
-                <p className="mt-1 text-xs text-[#9A9490]">{Number(post.view_count ?? 0).toLocaleString()} views</p>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-border bg-bg-2 overflow-hidden">
-          <div className="border-b border-border px-5 py-4"><p className="text-xs uppercase tracking-widest text-gold font-bold">Views by category</p></div>
-          <div className="divide-y divide-border">
-            {Object.entries(categoryViews).map(([category, views]) => (
-              <div key={category} className="flex items-center justify-between gap-4 px-5 py-4">
-                <span className="text-[#F0EDE8]">{category}</span>
-                <span className="text-[#9A9490]">{views.toLocaleString()}</span>
+                <p className="mt-1 text-xs text-[#6A6460]">/{post.slug}</p>
               </div>
-            ))}
-          </div>
-        </section>
-      </div>
+              <p className="text-sm text-[#9A9490]">{post.published ? 'published' : post.status || 'draft'}</p>
+              <p className="text-sm text-[#9A9490]">Score: {post.quality_score ?? '-'}</p>
+              <p className="text-sm text-[#9A9490]">{formatDate(post.updated_at || post.created_at)}</p>
+            </Link>
+          ))}
+          {!posts.length ? <div className="px-5 py-10 text-center text-[#9A9490]">No posts found.</div> : null}
+        </div>
+      </section>
     </div>
   )
 }

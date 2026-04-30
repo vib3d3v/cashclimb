@@ -6,7 +6,7 @@ export default function AdminSignOutLink() {
   const router = useRouter()
 
   async function handleSignOut() {
-    await fetch('/api/admin/sign-out', { method: 'POST' }).catch(() => null)
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null)
     router.push('/')
     router.refresh()
   }

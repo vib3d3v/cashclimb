@@ -1,5 +1,7 @@
 import type { WorkflowEvaluation } from '@/types'
 import SEORecheckButton from '@/components/admin/SEORecheckButton'
+import SEOFixButton from '@/components/admin/SEOFixButton'
+import AdvancedContentFixButton from '@/components/admin/AdvancedContentFixButton'
 import HumanizeButton from '@/components/admin/HumanizeButton'
 import RefreshArticleButton from '@/components/admin/RefreshArticleButton'
 
@@ -37,6 +39,8 @@ export default function SEOChecklistCard({
 
       <div className="mt-5 space-y-3">
         <SEORecheckButton postId={postId} />
+        <SEOFixButton postId={postId} />
+        <AdvancedContentFixButton postId={postId} />
         <HumanizeButton postId={postId} />
         <RefreshArticleButton postId={postId} />
       </div>

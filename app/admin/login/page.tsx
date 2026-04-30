@@ -1,139 +1,74 @@
 'use client'
 
-import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import toast from 'react-hot-toast'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { FormEvent, useState } from 'react'
 
-function LoginForm() {
-  const router = useRouter()
+export default function AdminLoginPage() {
   const searchParams = useSearchParams()
-
-  const requestedFrom = searchParams.get('from')
-  const from =
-    requestedFrom && requestedFrom.startsWith('/admin')
-      ? requestedFrom
-      : '/admin'
-
+  const from = searchParams.get('from') || '/admin'
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
 
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      })
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    })
 
-      if (!res.ok) {
-        throw new Error('Invalid password')
-      }
+    setBusy(false)
 
-      toast.success('Welcome back')
-      router.replace(from)
-      router.refresh()
-    } catch {
-      toast.error('Invalid password. Try again.')
-    } finally {
-      setLoading(false)
+    if (!response.ok) {
+      setError('Incorrect admin password.')
+      return
     }
+
+    window.location.href = from.startsWith('/admin') ? from : '/admin'
   }
 
   return (
-    <div className="w-full max-w-5xl grid lg:grid-cols-[0.95fr_1.05fr] gap-10 items-center">
-      <div className="hidden lg:block">
-        <p className="text-xs font-bold tracking-[0.18em] uppercase text-gold mb-4">
-          Admin Access
-        </p>
-
-        <h1 className="font-serif text-5xl font-black leading-[1.05] mb-6">
-          Sign in to manage
-          <br />
-          <span className="text-gold">CashClimb</span>
-        </h1>
-
-        <p className="text-[#9A9490] text-lg leading-relaxed max-w-xl">
-          Access your publishing dashboard, create articles, edit posts, upload
-          cover images, and manage the site from one place.
-        </p>
-      </div>
-
-      <div className="w-full max-w-xl lg:ml-auto">
-        <div className="flex items-center gap-2.5 justify-center lg:justify-start mb-8">
+    <main className="min-h-screen bg-bg flex items-center justify-center px-6">
+      <section className="w-full max-w-md rounded-2xl border border-border bg-bg-2 p-8 shadow-xl">
+        <Link href="/" className="mb-8 flex items-center gap-2">
           <div
-            className="w-10 h-10 bg-gold flex items-center justify-center text-bg font-black"
-            style={{
-              clipPath:
-                'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)',
-            }}
+            className="w-8 h-8 bg-gold flex items-center justify-center text-bg font-black text-sm"
+            style={{ clipPath: 'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' }}
           >
             C
           </div>
+          <span className="font-serif text-xl font-bold">Cash<span className="text-gold">Climb</span></span>
+        </Link>
 
-          <span className="font-serif text-2xl font-bold">
-            Cash<span className="text-gold">Climb</span>
-          </span>
-        </div>
+        <p className="text-xs font-bold uppercase tracking-widest text-gold">Admin</p>
+        <h1 className="mt-2 font-serif text-4xl font-black text-[#F0EDE8]">Editor login</h1>
+        <p className="mt-3 text-sm text-[#9A9490]">Sign in before opening the dashboard, writer, keywords, automation, or analytics.</p>
 
-        <div className="bg-bg-2 border border-border rounded-2xl p-8 lg:p-10">
-          <h2 className="font-serif text-3xl font-bold mb-2">Admin Login</h2>
+        <form onSubmit={submit} className="mt-8 space-y-4">
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-[#6A6460]">Password</span>
+            <input
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              type="password"
+              autoFocus
+              className="cc-input"
+              placeholder="Admin password"
+            />
+          </label>
 
-          <p className="text-[#9A9490] text-sm mb-8">
-            Enter your password to access the publishing dashboard.
-          </p>
+          {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="cc-label">Password</label>
-              <input
-                type="password"
-                className="cc-input w-full"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
-                autoFocus
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="cc-btn-primary w-full"
-              disabled={loading}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function LoginFallback() {
-  return (
-    <div className="w-full max-w-xl mx-auto">
-      <div className="bg-bg-2 border border-border rounded-2xl p-8 lg:p-10 animate-pulse">
-        <div className="h-8 bg-bg-3 rounded w-40 mb-3" />
-        <div className="h-4 bg-bg-3 rounded w-60 mb-8" />
-        <div className="h-11 bg-bg-3 rounded mb-5" />
-        <div className="h-11 bg-bg-3 rounded" />
-      </div>
-    </div>
-  )
-}
-
-export default function AdminLoginPage() {
-  return (
-    <div className="min-h-screen bg-bg px-6 py-16 lg:py-24">
-      <div className="max-w-7xl mx-auto">
-        <Suspense fallback={<LoginFallback />}>
-          <LoginForm />
-        </Suspense>
-      </div>
-    </div>
+          <button type="submit" disabled={busy || !password} className="cc-btn-primary w-full disabled:opacity-60">
+            {busy ? 'Signing in...' : 'Open dashboard'}
+          </button>
+        </form>
+      </section>
+    </main>
   )
 }

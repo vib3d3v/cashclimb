@@ -2,93 +2,87 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase-server'
-import { getAuthorByName, resolvePostAuthorName } from '@/lib/authors'
-import type { Post } from '@/types'
+import DeletePostButton from '@/components/admin/DeletePostButton'
 
-export default async function AdminPostsPage() {
+function formatDate(value?: string | null) {
+  return value ? new Date(value).toLocaleDateString() : '—'
+}
+
+export default async function PostsPage() {
   const supabase = createAdminClient()
-  const { data } = await supabase
+  const { data: posts } = await supabase
     .from('posts')
     .select('*')
     .order('created_at', { ascending: false })
 
-  const posts = (data ?? []) as Post[]
-  const publishedCount = posts.filter((post) => post.published).length
-  const draftCount = posts.length - publishedCount
-
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-widest text-gold font-bold mb-2">Admin</p>
-          <h1 className="font-serif text-4xl font-black text-[#F0EDE8]">Posts</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-gold">Admin</p>
+          <h1 className="mt-2 font-serif text-4xl font-black text-[#F0EDE8]">Posts</h1>
+          <p className="mt-2 text-[#9A9490]">
+            Edit drafts, review SEO scores, and publish approved articles.
+          </p>
         </div>
-        <Link href="/admin/posts/new" className="cc-btn-primary">New post</Link>
+        <Link href="/admin/posts/new" className="cc-btn-primary">
+          New post
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-border bg-bg-2 p-5">
-          <p className="text-xs uppercase tracking-widest text-[#6A6460] font-bold">Total</p>
-          <p className="text-4xl font-serif font-black mt-2">{posts.length}</p>
+      <section className="overflow-hidden rounded-2xl border border-border bg-bg-2">
+        <div className="grid grid-cols-[1fr_120px_90px_110px_180px] gap-4 border-b border-border px-5 py-3 text-xs font-bold uppercase tracking-widest text-[#6A6460]">
+          <span>Title</span>
+          <span>Status</span>
+          <span>Score</span>
+          <span>Updated</span>
+          <span>Actions</span>
         </div>
-        <div className="rounded-2xl border border-border bg-bg-2 p-5">
-          <p className="text-xs uppercase tracking-widest text-[#6A6460] font-bold">Published</p>
-          <p className="text-4xl font-serif font-black mt-2">{publishedCount}</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-bg-2 p-5">
-          <p className="text-xs uppercase tracking-widest text-[#6A6460] font-bold">Drafts</p>
-          <p className="text-4xl font-serif font-black mt-2">{draftCount}</p>
-        </div>
-      </div>
 
-      <div className="rounded-2xl border border-border bg-bg-2 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-border text-xs uppercase tracking-widest text-[#6A6460]">
-              <tr>
-                <th className="px-5 py-4">Title</th>
-                <th className="px-5 py-4">Category</th>
-                <th className="px-5 py-4">Author</th>
-                <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {posts.map((post) => {
-                const author = getAuthorByName(resolvePostAuthorName(post))
-                return (
-                  <tr key={post.id} className="border-b border-border last:border-b-0">
-                    <td className="px-5 py-4">
-                      <p className="font-semibold text-[#F0EDE8]">{post.title}</p>
-                      <p className="text-xs text-[#6A6460]">/blog/{post.slug}</p>
-                    </td>
-                    <td className="px-5 py-4 text-[#9A9490]">{post.category}</td>
-                    <td className="px-5 py-4 text-[#9A9490]">{author.name}</td>
-                    <td className="px-5 py-4">
-                      <span className={post.published ? 'text-emerald-400' : 'text-[#9A9490]'}>
-                        {post.published ? 'Live' : 'Draft'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex flex-wrap gap-2">
-                        <Link href={`/admin/posts/${post.id}/edit`} className="rounded-full border border-border px-3 py-1 text-xs text-[#F0EDE8] hover:border-gold">Edit</Link>
-                        {post.published ? (
-                          <Link href={`/blog/${post.slug}`} className="rounded-full border border-border px-3 py-1 text-xs text-[#F0EDE8] hover:border-gold">View</Link>
-                        ) : (
-                          <Link href={`/admin/posts/${post.id}/preview`} className="rounded-full border border-border px-3 py-1 text-xs text-[#F0EDE8] hover:border-gold">Preview</Link>
-                        )}
-                        <form action={`/api/admin/posts/${post.id}/delete`} method="POST">
-                          <button className="rounded-full border border-red-400/30 px-3 py-1 text-xs text-red-300 hover:border-red-300">Delete</button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="divide-y divide-border">
+          {(posts ?? []).map((post: any) => {
+            const postStatus = post.published ? 'published' : post.status || 'draft'
+
+            return (
+              <div
+                key={post.id}
+                className="grid grid-cols-[1fr_120px_90px_110px_180px] gap-4 px-5 py-4 hover:bg-bg-3"
+              >
+                <Link href={`/admin/posts/${post.id}/edit`} className="min-w-0">
+                  <span className="block truncate font-semibold text-[#F0EDE8]">
+                    {post.title}
+                  </span>
+                  <span className="mt-1 block truncate text-xs text-[#6A6460]">
+                    /{post.slug} · {post.category}
+                  </span>
+                </Link>
+
+                <span className="text-sm text-[#9A9490]">{postStatus}</span>
+                <span className="text-sm text-[#9A9490]">{post.quality_score ?? '—'}</span>
+                <span className="text-sm text-[#9A9490]">{formatDate(post.updated_at)}</span>
+
+                <div className="flex items-center gap-2">
+                  <Link href={`/admin/posts/${post.id}/edit`} className="cc-pill">
+                    Edit
+                  </Link>
+
+                  {post.slug ? (
+                    <Link href={`/blog/${post.slug}`} className="cc-pill" target="_blank">
+                      View
+                    </Link>
+                  ) : null}
+
+                  <DeletePostButton postId={post.id} />
+                </div>
+              </div>
+            )
+          })}
+
+          {!(posts ?? []).length ? (
+            <div className="px-5 py-10 text-center text-[#9A9490]">No posts yet.</div>
+          ) : null}
         </div>
-      </div>
+      </section>
     </div>
   )
 }

@@ -1,68 +1,69 @@
-export const dynamic = 'force-dynamic'
-
 import { createAdminClient } from '@/lib/supabase-server'
-import type { Comment } from '@/types'
-
-function formatDate(date?: string | null) {
-  if (!date) return '—'
-  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
+import CommentActions from '@/components/CommentActions'
 
 export default async function AdminCommentsPage() {
   const supabase = createAdminClient()
-  const { data, error } = await supabase
+  const { data: comments } = await supabase
     .from('comments')
     .select('*, posts(title, slug)')
     .order('created_at', { ascending: false })
-    .limit(100)
 
-  const comments = (data ?? []) as Array<Comment & { posts?: { title?: string; slug?: string } | null }>
+  const pending  = comments?.filter(c => !c.approved) ?? []
+  const approved = comments?.filter(c => c.approved)  ?? []
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-xs uppercase tracking-widest text-gold font-bold mb-2">Comments</p>
-        <h1 className="font-serif text-4xl font-black text-[#F0EDE8]">Comment moderation</h1>
-        <p className="mt-3 max-w-2xl text-[#9A9490]">Review, approve, or delete reader comments.</p>
-      </div>
+    <div>
+      <h1 className="font-serif text-3xl font-bold mb-8">Comments</h1>
 
-      <section className="rounded-2xl border border-border bg-bg-2 overflow-hidden">
-        {error ? (
-          <div className="p-6 text-sm text-[#9A9490]">Comments table is not available yet.</div>
-        ) : comments.length ? (
-          <div className="divide-y divide-border">
-            {comments.map((comment) => (
-              <div key={comment.id} className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_180px]">
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <p className="font-semibold text-[#F0EDE8]">{comment.author_name}</p>
-                    <span className={comment.approved ? 'text-xs text-emerald-400' : 'text-xs text-yellow-300'}>
-                      {comment.approved ? 'Approved' : 'Pending'}
-                    </span>
-                    <span className="text-xs text-[#6A6460]">{formatDate(comment.created_at)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-[#6A6460]">{comment.author_email}</p>
-                  <p className="mt-3 text-sm leading-7 text-[#D7D0CA]">{comment.body}</p>
-                  {comment.posts?.title ? <p className="mt-3 text-xs text-[#9A9490]">On: {comment.posts.title}</p> : null}
-                </div>
-
-                <div className="flex flex-wrap gap-2 lg:justify-end lg:self-start">
-                  {!comment.approved ? (
-                    <form action={`/api/admin/comments/${comment.id}/approve`} method="POST">
-                      <button className="rounded-full border border-border px-3 py-1.5 text-xs text-[#F0EDE8] hover:border-gold">Approve</button>
-                    </form>
-                  ) : null}
-                  <form action={`/api/admin/comments/${comment.id}/delete`} method="POST">
-                    <button className="rounded-full border border-red-400/30 px-3 py-1.5 text-xs text-red-300 hover:border-red-300">Delete</button>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Pending */}
+      <section className="mb-10">
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="font-semibold text-lg">Pending Approval</h2>
+          {pending.length > 0 && (
+            <span className="bg-yellow-400/15 text-yellow-400 text-xs font-bold px-2 py-0.5 rounded">
+              {pending.length}
+            </span>
+          )}
+        </div>
+        {pending.length === 0 ? (
+          <p className="text-[#6A6460] text-sm">No comments pending. ✓</p>
         ) : (
-          <div className="p-6 text-sm text-[#9A9490]">No comments yet.</div>
+          <div className="space-y-3">
+            {pending.map(c => <CommentRow key={c.id} comment={c} />)}
+          </div>
         )}
       </section>
+
+      {/* Approved */}
+      <section>
+        <h2 className="font-semibold text-lg mb-4">Approved ({approved.length})</h2>
+        {approved.length === 0 ? (
+          <p className="text-[#6A6460] text-sm">No approved comments yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {approved.map(c => <CommentRow key={c.id} comment={c} />)}
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function CommentRow({ comment }: { comment: any }) {
+  return (
+    <div className="bg-bg-2 border border-border rounded-xl p-5">
+      <div className="flex justify-between items-start gap-4 mb-3">
+        <div>
+          <span className="font-semibold text-sm text-[#F0EDE8]">{comment.author_name}</span>
+          <span className="text-[#6A6460] text-xs ml-2">{comment.author_email}</span>
+          {comment.posts && (
+            <span className="text-[#6A6460] text-xs ml-2">on "{comment.posts.title}"</span>
+          )}
+        </div>
+        <span className="text-xs text-[#6A6460] flex-shrink-0">{comment.created_at?.slice(0, 10)}</span>
+      </div>
+      <p className="text-[#9A9490] text-sm leading-relaxed mb-4">{comment.body}</p>
+      <CommentActions commentId={comment.id} approved={comment.approved} />
     </div>
   )
 }

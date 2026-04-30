@@ -2,65 +2,77 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase-server'
-import type { Post } from '@/types'
 
-export default async function AdminWorkflowPage() {
+function SectionCard({ title, subtitle, count, href, tone }: { title: string; subtitle: string; count: number; href: string; tone: string }) {
+  return (
+    <Link href={href} className="rounded-xl border border-border bg-bg-2 p-5 transition-colors hover:border-gold">
+      <p className="text-xs font-bold uppercase tracking-widest text-[#6A6460]">{title}</p>
+      <p className={`mt-3 text-3xl font-black ${tone}`}>{count}</p>
+      <p className="mt-2 text-sm text-[#9A9490]">{subtitle}</p>
+    </Link>
+  )
+}
+
+export default async function WorkflowPage() {
   const supabase = createAdminClient()
-  const [{ data: postRows }, { data: checksRows }] = await Promise.all([
-    supabase.from('posts').select('*').order('updated_at', { ascending: false }),
-    supabase.from('quality_checks').select('*').order('created_at', { ascending: false }).limit(50),
+  const [queueRes, reviewRes, approvedRes, publishedRes, qualityRes] = await Promise.all([
+    supabase.from('keyword_queue').select('id', { count: 'exact', head: true }).eq('status', 'queued'),
+    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'review_required'),
+    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'approved'),
+    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
+    supabase.from('quality_checks').select('id, post_id, score, passed, risk_level, created_at, posts(title, slug)').order('created_at', { ascending: false }).limit(10),
   ])
 
-  const posts = (postRows ?? []) as Array<Post & { status?: string | null; quality_score?: number | null; risk_level?: string | null }>
-  const checks = checksRows ?? []
-  const reviewQueue = posts.filter((post) => !post.published)
+  const recentChecks = qualityRes.data ?? []
 
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-xs uppercase tracking-widest text-gold font-bold mb-2">Workflow</p>
-        <h1 className="font-serif text-4xl font-black text-[#F0EDE8]">Editorial workflow</h1>
-        <p className="mt-3 max-w-2xl text-[#9A9490]">Track draft status, quality checks, and publish readiness.</p>
+        <h1 className="font-serif text-3xl font-bold">Editorial Workflow</h1>
+        <p className="mt-1 text-sm text-[#9A9490]">CashClimb review-first automation for finance content.</p>
       </div>
 
-      <section className="rounded-2xl border border-border bg-bg-2 overflow-hidden">
-        <div className="border-b border-border px-5 py-4"><p className="text-xs uppercase tracking-widest text-gold font-bold">Draft and review queue</p></div>
-        <div className="divide-y divide-border">
-          {reviewQueue.map((post) => (
-            <div key={post.id} className="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1fr)_120px_110px] md:items-center">
-              <div>
-                <Link href={`/admin/posts/${post.id}/edit`} className="font-semibold text-[#F0EDE8] hover:text-gold">{post.title}</Link>
-                <p className="mt-1 text-xs text-[#6A6460]">{post.category} · {post.read_time}</p>
-              </div>
-              <div className="text-sm text-[#9A9490]">Score: {post.quality_score ?? '—'}</div>
-              <Link href={`/admin/posts/${post.id}/edit`} className="rounded-full border border-border px-3 py-1.5 text-center text-xs text-[#F0EDE8] hover:border-gold">Review</Link>
-            </div>
-          ))}
-          {!reviewQueue.length ? <div className="p-6 text-sm text-[#9A9490]">No drafts waiting for review.</div> : null}
-        </div>
-      </section>
+      <div className="grid gap-4 md:grid-cols-4">
+        <SectionCard title="Queued Keywords" subtitle="Topics ready for generation" count={queueRes.count ?? 0} href="/admin/keywords" tone="text-gold" />
+        <SectionCard title="Needs Review" subtitle="Drafts blocked for editorial review" count={reviewRes.count ?? 0} href="/admin/posts" tone="text-yellow-400" />
+        <SectionCard title="Approved" subtitle="Ready to publish" count={approvedRes.count ?? 0} href="/admin/posts" tone="text-sky-400" />
+        <SectionCard title="Published" subtitle="Live articles" count={publishedRes.count ?? 0} href="/admin/posts" tone="text-emerald-400" />
+      </div>
 
-      <section className="rounded-2xl border border-border bg-bg-2 overflow-hidden">
-        <div className="border-b border-border px-5 py-4"><p className="text-xs uppercase tracking-widest text-gold font-bold">Recent quality checks</p></div>
-        {checks.length ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-border text-xs uppercase tracking-widest text-[#6A6460]">
-                <tr><th className="px-5 py-4">Post</th><th className="px-5 py-4">Score</th><th className="px-5 py-4">Risk</th><th className="px-5 py-4">Passed</th></tr>
-              </thead>
-              <tbody>
-                {checks.map((check: any) => (
-                  <tr key={check.id} className="border-b border-border last:border-b-0">
-                    <td className="px-5 py-4 text-[#9A9490]">{check.post_id}</td>
-                    <td className="px-5 py-4 text-[#F0EDE8]">{check.score}</td>
-                    <td className="px-5 py-4 text-[#9A9490]">{check.risk_level}</td>
-                    <td className="px-5 py-4">{check.passed ? <span className="text-emerald-400">Yes</span> : <span className="text-yellow-300">No</span>}</td>
-                  </tr>
+      <section className="overflow-hidden rounded-xl border border-border bg-bg-2">
+        <div className="border-b border-border px-5 py-4">
+          <h2 className="text-lg font-bold">Recent Quality Checks</h2>
+          <p className="text-sm text-[#6A6460]">Latest automated finance quality evaluations.</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                {['Post', 'Score', 'Passed', 'Risk', 'Checked'].map((heading) => (
+                  <th key={heading} className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-[#6A6460]">{heading}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        ) : <div className="p-6 text-sm text-[#9A9490]">No quality checks yet.</div>}
+              </tr>
+            </thead>
+            <tbody>
+              {recentChecks.map((row: any) => (
+                <tr key={row.id} className="border-b border-border last:border-0">
+                  <td className="px-5 py-4 text-sm font-medium">
+                    {row.posts?.slug ? <Link href={`/admin/posts/${row.post_id}/edit`} className="hover:text-gold">{row.posts?.title ?? row.post_id}</Link> : row.posts?.title ?? row.post_id}
+                  </td>
+                  <td className="px-5 py-4 text-sm">{row.score}</td>
+                  <td className="px-5 py-4 text-sm">{row.passed ? 'Yes' : 'No'}</td>
+                  <td className="px-5 py-4 text-sm capitalize">{row.risk_level}</td>
+                  <td className="px-5 py-4 text-sm text-[#9A9490]">{String(row.created_at).slice(0, 10)}</td>
+                </tr>
+              ))}
+              {recentChecks.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-[#6A6460]">No quality checks yet. Generate a draft from the keyword queue to see SEO checklist scores here.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   )

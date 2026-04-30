@@ -1,28 +1,46 @@
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import ToolsNav from '@/components/ToolsNav'
 import CompoundCalculator from '@/components/CompoundCalculator'
-
-export const metadata = {
-  title: 'Compound Interest Calculator',
-  description: 'Estimate how savings or investments can grow over time with CashClimb compound interest calculator.',
-}
+import Link from 'next/link'
 
 export default function CompoundCalculatorPage() {
   return (
     <>
       <Navbar />
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="mb-8">
-          <p className="text-xs uppercase tracking-widest text-gold font-bold mb-3">Financial tool</p>
-          <h1 className="font-serif text-4xl md:text-5xl font-black text-[#F0EDE8]">
-            Compound Interest Calculator
-          </h1>
-          <p className="text-[#9A9490] mt-4 max-w-2xl leading-relaxed">
-            Estimate how regular saving, time, and compounding can affect long-term growth. This is for educational use only.
+
+      <main className="max-w-7xl mx-auto px-6 py-10 lg:py-14">
+        <ToolsNav currentPath="/tools/compound-calculator" />
+
+        <section className="max-w-4xl mb-10">
+          <p className="text-xs font-bold tracking-widest uppercase text-gold mb-3">
+            Financial Tool
           </p>
-        </div>
+
+          <h1 className="font-serif text-4xl lg:text-6xl font-black leading-[1] mb-5">
+            Compound Growth
+            <br />
+            <span className="text-gold">Calculator</span>
+          </h1>
+
+          <p className="text-[#9A9490] text-lg leading-relaxed max-w-3xl">
+            Estimate how regular contributions and long-term compounding can grow
+            your money over time.
+          </p>
+
+          <div className="mt-6">
+            <Link
+              href="/tools"
+              className="text-sm text-[#9A9490] hover:text-gold transition-colors"
+            >
+              ← Back to Tools
+            </Link>
+          </div>
+        </section>
+
         <CompoundCalculator />
       </main>
+
       <Footer />
     </>
   )

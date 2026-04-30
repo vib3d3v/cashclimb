@@ -30,6 +30,10 @@ type RelatedLink = {
 
 const AUTHOR_NAME = 'Daniel Reeves'
 
+function safeString(value: any = '') {
+  return String(value || '')
+}
+
 const TOOL_BLOCKS: Record<string, string[]> = {
   'Personal Finance': [
     'A simple budgeting app or spreadsheet template to track cash flow.',
@@ -63,21 +67,21 @@ const TOOL_BLOCKS: Record<string, string[]> = {
   ],
 }
 
-function stripHtml(html: string) {
-  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+function stripHtml(html: any = '') {
+  return safeString(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function sanitizeTitle(title: string) {
-  return title.replace(/\s+/g, ' ').trim()
+function sanitizeTitle(title: any) {
+  return safeString(title).replace(/\s+/g, ' ').trim()
 }
 
-function trimToLength(text: string, max: number) {
-  const clean = text.replace(/\s+/g, ' ').trim()
+function trimToLength(text: any, max: number) {
+  const clean = safeString(text).replace(/\s+/g, ' ').trim()
   if (clean.length <= max) return clean
   return `${clean.slice(0, Math.max(0, max - 1)).trim()}…`
 }
 
-function words(text: string) {
+function words(text: any) {
   return stripHtml(text).split(/\s+/).filter(Boolean).length
 }
 
@@ -159,8 +163,8 @@ function ensureDepth(html: string, keyword?: string | null) {
   return `${html.trim()}\n<h2>Common mistakes to avoid</h2>\n<p>One of the biggest mistakes with ${topic} is making a decision before you understand the tradeoffs. Another is focusing on one number while ignoring timing, fees, account rules, or the impact on the rest of your plan.</p>\n<p>It also helps to revisit the decision after you have real numbers. The article becomes much more useful once you apply it to your own cash flow, deadlines, and priorities.</p>`
 }
 
-function titleCaseKeyword(keyword: string) {
-  return keyword
+function titleCaseKeyword(keyword: any) {
+  return safeString(keyword)
     .split(/\s+/)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -245,7 +249,7 @@ function strengthenMetadata(post: EditablePost, contentHtml: string, titleOverri
 }
 
 function fallbackHumanize(contentHtml: string, category: string | null | undefined) {
-  let html = contentHtml
+  let html = safeString(contentHtml)
     .replace(/\bWhen it comes to\b/gi, 'For')
     .replace(/\bIn today's world\b/gi, 'Right now')
     .replace(/\bIt is important to note that\b/gi, 'Keep in mind that')
@@ -461,9 +465,9 @@ Flagged paragraphs to rewrite:
 ${flaggedSummary}`
 }
 
-function replaceParagraphs(html: string, replacements: Array<{ original: string; revised: string }> | undefined) {
-  if (!replacements?.length) return html
-  let next = html
+function replaceParagraphs(html: any, replacements: Array<{ original: string; revised: string }> | undefined) {
+  if (!replacements?.length) return safeString(html)
+  let next = safeString(html)
   for (const pair of replacements) {
     const original = pair.original?.trim()
     const revised = pair.revised?.trim()
@@ -473,9 +477,9 @@ function replaceParagraphs(html: string, replacements: Array<{ original: string;
   return next
 }
 
-function replaceOpeningParagraph(html: string, openingParagraph?: string) {
-  if (!openingParagraph?.trim()) return html
-  return html.replace(/<p>[\s\S]*?<\/p>/i, openingParagraph.trim())
+function replaceOpeningParagraph(html: any, openingParagraph?: string) {
+  if (!safeString(openingParagraph).trim()) return safeString(html)
+  return safeString(html).replace(/<p>[\s\S]*?<\/p>/i, safeString(openingParagraph).trim())
 }
 
 export async function humanizeExistingPost(post: EditablePost): Promise<RewrittenPost> {
@@ -517,7 +521,7 @@ export async function improveFailedChecks(
     ? await openaiJsonRewrite<TargetedImproveResult>(targetedImprovePrompt(post, failedChecks, relatedLinks), 30000, 2)
     : null
 
-  let contentHtml = post.body
+  let contentHtml = safeString(post.body)
   contentHtml = replaceOpeningParagraph(contentHtml, parsed?.openingParagraph)
   contentHtml = replaceParagraphs(contentHtml, parsed?.replacements)
   contentHtml = softenFlaggedLanguage(contentHtml)

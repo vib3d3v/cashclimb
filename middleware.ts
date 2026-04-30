@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const ADMIN_COOKIE = 'cc-admin-token'
-
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl
 
@@ -11,15 +9,14 @@ export function middleware(req: NextRequest) {
     '/api/auth/logout',
   ]
 
-  if (publicPaths.some((path) => pathname.startsWith(path))) {
+  if (publicPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.next()
   }
 
   if (pathname.startsWith('/admin')) {
-    const token = req.cookies.get(ADMIN_COOKIE)?.value
-    const adminPassword = process.env.ADMIN_PASSWORD
+    const token = req.cookies.get('cc-admin-token')?.value
 
-    if (!adminPassword || token !== adminPassword) {
+    if (token !== process.env.ADMIN_PASSWORD) {
       const loginUrl = new URL('/admin/login', req.url)
       loginUrl.searchParams.set('from', `${pathname}${search}`)
       return NextResponse.redirect(loginUrl)
