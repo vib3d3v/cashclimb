@@ -12,7 +12,13 @@ export const dynamic = 'force-dynamic'
 
 export default async function EditPostPage({ params }: { params: { id: string } }) {
   const supabase = createAdminClient()
-  const { data: post } = await supabase.from('posts').select('*').eq('id', params.id).single()
+
+  const { data: post } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('id', params.id)
+    .single()
+
   if (!post) notFound()
 
   const { data: latestCheck } = await supabase
@@ -45,10 +51,12 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     'use server'
 
     const supabase = createAdminClient()
+
     const title = String(formData.get('title') || '').trim()
     const body = String(formData.get('body') || '').trim()
     const category = String(formData.get('category') || 'Personal Finance')
     const status = String(formData.get('status') || 'draft')
+
     const related = String(formData.get('related_keywords') || '')
       .split(',')
       .map((x) => x.trim())
@@ -56,7 +64,10 @@ export default async function EditPostPage({ params }: { params: { id: string } 
 
     const payload = {
       title,
-      slug: slugify(String(formData.get('slug') || title), { lower: true, strict: true }),
+      slug: slugify(String(formData.get('slug') || title), {
+        lower: true,
+        strict: true,
+      }),
       excerpt: String(formData.get('excerpt') || '').trim(),
       body,
       category,
@@ -72,31 +83,12 @@ export default async function EditPostPage({ params }: { params: { id: string } 
       seo_description: String(formData.get('seo_description') || '').trim() || null,
     }
 
-    const evaluation = evaluateFinanceArticle({
-      title: payload.title,
-      excerpt: payload.excerpt,
-      body: payload.body,
-      primaryKeyword: payload.primary_keyword,
-      category,
-      seoTitle: payload.seo_title,
-      seoDescription: payload.seo_description,
-      coverUrl: payload.cover_url,
-    })
-
     const { error } = await supabase
       .from('posts')
-      .update({ ...payload, quality_score: evaluation.score, risk_level: evaluation.risk_level })
+      .update(payload)
       .eq('id', params.id)
 
     if (error) throw error
-
-    await supabase.from('quality_checks').insert({
-      post_id: params.id,
-      score: evaluation.score,
-      passed: evaluation.passed,
-      risk_level: evaluation.risk_level,
-      checks: evaluation.checks,
-    })
 
     redirect(`/admin/posts/${params.id}/edit?notice=saved`)
   }
@@ -108,8 +100,12 @@ export default async function EditPostPage({ params }: { params: { id: string } 
       </Suspense>
 
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-gold">Admin</p>
-        <h1 className="mt-2 font-serif text-4xl font-black text-[#F0EDE8]">Edit post</h1>
+        <p className="text-xs font-bold uppercase tracking-widest text-gold">
+          Admin
+        </p>
+        <h1 className="mt-2 font-serif text-4xl font-black text-[#F0EDE8]">
+          Edit post
+        </h1>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
