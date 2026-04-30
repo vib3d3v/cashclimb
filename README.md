@@ -1,14 +1,24 @@
+CashClimb login/admin patch
 
-CashClimb Patch Instructions
+Overwrite these files in your CashClimb project:
 
-1. Replace lib/automation/db.ts with db.ts in this package.
-2. Add safe() helper to:
-   - lib/ai-editor.ts
-   - lib/automation/seo-fixer.ts
-   - lib/automation/content.ts
-3. Replace all .replace/.trim/.toLowerCase usages with safe().
-4. Ensure all routes use:
-   body (not body_html)
-   cover_url (not cover_image)
-5. Restart:
-   rm -rf .next && npm run dev
+- app/admin/login/page.tsx
+- app/admin/login/LoginForm.tsx
+- app/api/admin/login/route.ts
+- app/admin/posts/[id]/edit/page.tsx
+
+What this fixes:
+- Live admin login now sets the cc-admin-token cookie that middleware expects.
+- Login accepts ADMIN_EMAIL, ADMIN_USERNAME, or admin with the configured ADMIN_PASSWORD.
+- Login redirects back to the requested admin page after success.
+- Post edit page wraps PostSaveToast in Suspense to avoid useSearchParams build issues.
+
+After replacing:
+1. npm run build
+2. git add .
+3. git commit -m "Fix live admin login"
+4. git push origin main
+
+Vercel env required:
+ADMIN_PASSWORD=your password
+ADMIN_EMAIL=your email OR ADMIN_USERNAME=admin
