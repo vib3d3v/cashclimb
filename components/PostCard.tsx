@@ -103,7 +103,7 @@ export default function PostCard({ post }: { post: Post }) {
 
         <div className="mt-auto pt-4 border-t border-border flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full border border-border bg-[#111214] text-[#F0EDE8] flex items-center justify-center text-[11px] font-bold tracking-wide flex-shrink-0">
+            <div className="h-9 w-9 shrink-0 rounded-full border border-border bg-[#111214] text-[#F0EDE8] flex items-center justify-center text-[11px] font-bold leading-none tracking-wide">
               {author.initials}
             </div>
 

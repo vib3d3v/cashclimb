@@ -167,8 +167,8 @@ export default async function BlogPostPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 
-      <main className="mx-auto max-w-7xl px-6 py-12">
-        <article className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
+      <main className="mx-auto max-w-7xl px-6 py-12 overflow-hidden">
+        <article className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,820px)_minmax(280px,320px)] lg:justify-center">
           <div className="min-w-0">
             <div className="mb-8">
               <Link
@@ -184,7 +184,7 @@ export default async function BlogPostPage({
                 <span>{post.read_time}</span>
               </div>
 
-              <h1 className="mt-4 max-w-4xl break-words font-serif text-4xl font-black leading-tight text-[#F0EDE8]">
+              <h1 className="mt-4 max-w-4xl break-words font-serif text-4xl font-black leading-tight text-[#F0EDE8] sm:text-5xl lg:text-6xl">
                 {post.title}
               </h1>
 
@@ -198,7 +198,7 @@ export default async function BlogPostPage({
               className="mb-8 block rounded-2xl border border-border bg-bg-2 p-5 hover:border-gold transition-colors"
             >
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-full border border-border bg-[#111214] text-[#F0EDE8] flex items-center justify-center text-sm font-bold">
+                <div className="h-14 w-14 shrink-0 rounded-full border border-border bg-[#111214] text-[#F0EDE8] flex items-center justify-center text-sm font-bold leading-none">
                   {author.initials}
                 </div>
 
@@ -216,7 +216,7 @@ export default async function BlogPostPage({
             </Link>
 
             {post.cover_url ? (
-              <div className="relative aspect-[16/8] rounded-3xl overflow-hidden border border-border mb-10">
+              <div className="relative aspect-[16/9] w-full rounded-3xl overflow-hidden border border-border mb-10">
                 <Image
                   src={post.cover_url}
                   alt={post.title}
@@ -271,7 +271,7 @@ export default async function BlogPostPage({
                 About the author
               </p>
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-full border border-border bg-[#111214] text-[#F0EDE8] flex items-center justify-center text-sm font-bold">
+                <div className="h-14 w-14 shrink-0 rounded-full border border-border bg-[#111214] text-[#F0EDE8] flex items-center justify-center text-sm font-bold leading-none">
                   {author.initials}
                 </div>
                 <div>
@@ -295,7 +295,7 @@ export default async function BlogPostPage({
                 <p className="text-xs uppercase tracking-widest text-gold font-bold mb-4">
                   Related guides
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {relatedPosts.map((item) => {
                     const relatedAuthorName = resolvePostAuthorName(item)
                     const relatedAuthor = getAuthorByName(relatedAuthorName)
@@ -304,12 +304,12 @@ export default async function BlogPostPage({
                       <Link
                         key={item.id}
                         href={`/blog/${item.slug}`}
-                        className="rounded-2xl border border-border bg-bg-2 p-5 hover:border-gold transition-colors"
+                        className="min-w-0 rounded-2xl border border-border bg-bg-2 p-5 hover:border-gold transition-colors"
                       >
                         <p className="text-xs text-gold font-bold mb-2">
                           {item.category}
                         </p>
-                        <h3 className="text-[#F0EDE8] font-bold leading-snug">
+                        <h3 className="break-words text-[#F0EDE8] font-bold leading-snug">
                           {item.title}
                         </h3>
                         <p className="text-sm text-[#9A9490] mt-3 line-clamp-3">
@@ -326,7 +326,7 @@ export default async function BlogPostPage({
             ) : null}
           </div>
 
-          <aside className="min-w-0 space-y-5">
+          <aside className="min-w-0 space-y-5 lg:max-w-[320px]">
             <div className="rounded-2xl border border-border bg-bg-2 p-5 lg:sticky lg:top-6">
               <p className="text-xs uppercase tracking-widest text-gold font-bold mb-3">
                 Article details

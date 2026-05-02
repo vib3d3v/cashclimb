@@ -7,6 +7,7 @@ import PostSaveToast from '@/components/admin/PostSaveToast'
 import SEOChecklistCard from '@/components/admin/SEOChecklistCard'
 import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle } from '@/lib/editorial-workflow'
+import { normalizeLinksInHtml } from '@/lib/normalize-links'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,7 +54,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     const supabase = createAdminClient()
 
     const title = String(formData.get('title') || '').trim()
-    const body = String(formData.get('body') || '').trim()
+    const body = normalizeLinksInHtml(String(formData.get('body') || '').trim())
     const category = String(formData.get('category') || 'Personal Finance')
     const status = String(formData.get('status') || 'draft')
 
@@ -110,7 +111,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <PostForm post={post} action={updatePost} submitLabel="Save post" />
-        <SEOChecklistCard postId={params.id} evaluation={evaluation as any} />
+        <SEOChecklistCard postId={post.id} evaluation={evaluation as any} />
       </div>
     </div>
   )

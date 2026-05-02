@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import readingTime from 'reading-time'
 import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle } from '@/lib/editorial-workflow'
+import { normalizeLinksInHtml } from '@/lib/normalize-links'
 
 export const dynamic = 'force-dynamic'
 
@@ -192,7 +193,7 @@ function expandBody(body: string, keyword: string) {
 
 function fixBody(post: any) {
   const keyword = clean(post.primary_keyword || post.title || 'this topic')
-  let body = clean(post.body)
+  let body = normalizeLinksInHtml(clean(post.body))
 
   if (!body) {
     body = `<p>This guide explains ${keyword} in plain English, with practical examples, common mistakes, and safe next steps.</p>`
@@ -213,7 +214,7 @@ export async function POST(
   context: { params: { postId: string } }
 ) {
   try {
-    const postId = clean(context.params?.postId)
+    const postId = clean((context.params as any)?.postId || (context.params as any)?.id)
 
     if (!postId) {
       return NextResponse.json(
