@@ -11,7 +11,7 @@ type PostRow = {
 }
 
 function getBaseUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org').replace(/\/$/, '')
+  return (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://cashclimb.org').replace(/\/$/, '')
 }
 
 function getPostPriority(date?: string | null): number {
@@ -37,8 +37,6 @@ function getPostFrequency(date?: string | null): SitemapEntry['changeFrequency']
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getBaseUrl()
-  const supabase = createAdminClient()
-
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: `${base}/`,
@@ -83,18 +81,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }))
 
-  const { data, error } = await supabase
-    .from('posts')
-    .select('slug, updated_at, created_at, published')
-    .eq('published', true)
-    .not('slug', 'is', null)
-    .order('updated_at', { ascending: false })
+  let posts: PostRow[] = []
 
-  if (error) {
-    console.error('Sitemap posts query failed:', error)
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const supabase = createAdminClient()
+      const { data, error } = await supabase
+        .from('posts')
+        .select('slug, updated_at, created_at, published')
+        .eq('published', true)
+        .not('slug', 'is', null)
+        .order('updated_at', { ascending: false })
+
+      if (error) {
+        console.error('Sitemap posts query failed:', error)
+      }
+
+      posts = (data ?? []) as PostRow[]
+    } catch (error) {
+      console.error('Sitemap generation skipped dynamic posts:', error)
+    }
+  } else {
+    console.warn('Sitemap generated without blog posts because Supabase env vars are missing.')
   }
-
-  const posts = (data ?? []) as PostRow[]
 
   const blogPages: MetadataRoute.Sitemap = posts
     .filter((post) => post.slug)

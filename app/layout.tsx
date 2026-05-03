@@ -15,7 +15,7 @@ const dmSans = DM_Sans({
   display: 'swap',
 })
 
-const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org').replace(/\/$/, '')
+const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://cashclimb.org').replace(/\/$/, '')
 const socialImage = '/opengraph-image'
 
 export const metadata: Metadata = {
@@ -32,6 +32,8 @@ export const metadata: Metadata = {
   creator: 'CashClimb',
   publisher: 'CashClimb',
   robots: { index: true, follow: true },
+  alternates: { canonical: siteUrl },
+  icons: { icon: '/favicon.svg' },
   openGraph: {
     type: 'website',
     locale: 'en_US',

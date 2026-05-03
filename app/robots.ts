@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://cashclimb.org').replace(/\/$/, '')
+const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://cashclimb.org').replace(/\/$/, '')
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -25,7 +25,6 @@ export default function robots(): MetadataRoute.Robots {
           '/auth',
           '/auth/',
           '/_next/',
-          '/*?*',
         ],
       },
     ],
