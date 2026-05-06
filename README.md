@@ -1,24 +1,21 @@
-CashClimb login/admin patch
+CashClimb link validation patch
 
-Overwrite these files in your CashClimb project:
-
-- app/admin/login/page.tsx
-- app/admin/login/LoginForm.tsx
-- app/api/admin/login/route.ts
+Files included:
+- lib/normalize-links.ts
 - app/admin/posts/[id]/edit/page.tsx
+- app/api/admin/posts/[postId]/fix-seo/route.ts
+- app/api/cron/daily-draft/route.ts
 
 What this fixes:
-- Live admin login now sets the cc-admin-token cookie that middleware expects.
-- Login accepts ADMIN_EMAIL, ADMIN_USERNAME, or admin with the configured ADMIN_PASSWORD.
-- Login redirects back to the requested admin page after success.
-- Post edit page wraps PostSaveToast in Suspense to avoid useSearchParams build issues.
+- Normalizes internal CashClimb URLs to relative links.
+- Normalizes external URLs to https.
+- Replaces known dead source URLs with valid trusted alternatives.
+- Validates external links server-side before saving edited posts, Fix SEO output, and cron-generated drafts.
+- Removes unfixable dead external anchors instead of saving 404 links.
 
-After replacing:
-1. npm run build
-2. git add .
-3. git commit -m "Fix live admin login"
-4. git push origin main
-
-Vercel env required:
-ADMIN_PASSWORD=your password
-ADMIN_EMAIL=your email OR ADMIN_USERNAME=admin
+After copying these files into the project root:
+rm -rf .next
+npm run build
+git add .
+git commit -m "Validate and normalize external article links"
+git push origin main

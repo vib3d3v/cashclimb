@@ -6,6 +6,7 @@ import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editoria
 import { requireAdmin } from '@/lib/admin-guard'
 import type { Category } from '@/types'
 import { resolvePostAuthorName } from '@/lib/authors'
+import { normalizeAndValidateLinksInHtml } from '@/lib/normalize-links'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -1168,14 +1169,17 @@ async function createDraftPost(
   // 🔑 Build slug safely
   const slug = buildSlug(article.title)
 
+  // 🔗 Normalize and validate external links before scoring or saving.
+  const safeContentHtml = await normalizeAndValidateLinksInHtml(article.contentHtml)
+
   // ⏱️ Read time
-  const readTime = readingTime(stripHtml(article.contentHtml)).text
+  const readTime = readingTime(stripHtml(safeContentHtml)).text
 
   // 🧠 Evaluate article quality + risk
   const evaluation = evaluateFinanceArticle({
     title: article.title,
     excerpt: article.excerpt,
-    body: article.contentHtml,
+    body: safeContentHtml,
     primaryKeyword: outline.primaryKeyword,
     category,
     seoTitle: article.seoTitle,
@@ -1199,7 +1203,7 @@ async function createDraftPost(
     title: article.title,
     slug,
     excerpt: article.excerpt,
-    body: article.contentHtml,
+    body: safeContentHtml,
     category,
     author: article.author,
     cover_url: coverUrl,

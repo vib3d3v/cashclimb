@@ -7,7 +7,7 @@ import PostSaveToast from '@/components/admin/PostSaveToast'
 import SEOChecklistCard from '@/components/admin/SEOChecklistCard'
 import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle } from '@/lib/editorial-workflow'
-import { normalizeLinksInHtml } from '@/lib/normalize-links'
+import { normalizeAndValidateLinksInHtml } from '@/lib/normalize-links'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,7 +54,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     const supabase = createAdminClient()
 
     const title = String(formData.get('title') || '').trim()
-    const body = normalizeLinksInHtml(String(formData.get('body') || '').trim())
+    const body = await normalizeAndValidateLinksInHtml(String(formData.get('body') || '').trim())
     const category = String(formData.get('category') || 'Personal Finance')
     const status = String(formData.get('status') || 'draft')
 
