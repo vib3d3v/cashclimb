@@ -2,16 +2,17 @@ import { NextResponse } from 'next/server'
 import readingTime from 'reading-time'
 import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle } from '@/lib/editorial-workflow'
-import { normalizeAndValidateLinksInHtml } from '@/lib/normalize-links'
+import { cleanupExternalLinks } from '@/lib/normalize-links'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 function clean(value: any = '') {
   return String(value || '').trim()
 }
 
 function stripHtml(value: any = '') {
-  return clean(value).replace(/<[^>]*>/g, ' ')
+  return clean(value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 function wordCount(value: any = '') {
@@ -36,36 +37,34 @@ function trimTo(value: any = '', max = 160) {
   return text.slice(0, max).replace(/\s+\S*$/, '').trim()
 }
 
-function fixTitle(post: any) {
-  const keyword = clean(post.primary_keyword || post.title || 'personal finance guide')
-  let title = clean(post.title)
-
-  title = title
+function removeGenericSuffix(value: any = '') {
+  return clean(value)
     .replace(/:\s*A Practical CashClimb Guide$/i, '')
     .replace(/\s*A Practical CashClimb Guide$/i, '')
     .replace(/:\s*$/g, '')
     .trim()
+}
+
+function fixTitle(post: any) {
+  const keyword = clean(post.primary_keyword || post.title || 'personal finance guide')
+  let title = removeGenericSuffix(post.title)
 
   if (!title || title.length < 35) {
     title = `${titleCase(keyword)}: Step-by-Step Guide`
   }
 
-  if (!title.toLowerCase().includes(keyword.toLowerCase())) {
+  if (keyword && !title.toLowerCase().includes(keyword.toLowerCase())) {
     title = `${titleCase(keyword)}: ${title}`
   }
 
-  return trimTo(title, 70)
+  return trimTo(removeGenericSuffix(title), 70)
 }
 
 function fixExcerpt(post: any, title: string) {
   const current = clean(post.excerpt)
-
-  if (current.length >= 90 && current.length <= 180) {
-    return current
-  }
+  if (current.length >= 90 && current.length <= 180) return current
 
   const topic = clean(post.primary_keyword || title).toLowerCase()
-
   return trimTo(
     `Learn ${topic} with a clear checklist, practical examples, common mistakes, and safe next steps for everyday money decisions.`,
     180
@@ -73,40 +72,24 @@ function fixExcerpt(post: any, title: string) {
 }
 
 function fixSeoTitle(post: any, title: string) {
-  const current = clean(post.seo_title)
-    .replace(/:\s*A Practical CashClimb Guide$/i, '')
-    .replace(/\s*A Practical CashClimb Guide$/i, '')
-    .trim()
-
-  if (current.length >= 40 && current.length <= 65) {
-    return current
-  }
-
+  const current = removeGenericSuffix(post.seo_title)
+  if (current.length >= 40 && current.length <= 65) return current
   return trimTo(title, 65)
 }
 
 function fixSeoDescription(post: any, excerpt: string) {
   const current = clean(post.seo_description)
-
-  if (current.length >= 120 && current.length <= 160) {
-    return current
-  }
-
+  if (current.length >= 120 && current.length <= 160) return current
   return trimTo(excerpt, 160)
 }
 
 function ensureDisclaimer(body: string) {
-  if (/not personal financial|general educational purposes/i.test(body)) {
-    return body
-  }
-
-  return `<p><em>This article is for general educational purposes and is not personal financial, investment, tax, or legal advice.</em></p>
-
-${body}`.trim()
+  if (/not personal financial|general educational purposes|not financial advice/i.test(body)) return body
+  return `<p><em>This article is for general educational purposes and is not personal financial, investment, tax, or legal advice.</em></p>\n\n${body}`.trim()
 }
 
 function ensureKeyTakeaways(body: string) {
-  if (/key takeaways/i.test(body)) return body
+  if (/<h2[^>]*>\s*Key Takeaways\s*<\/h2>/i.test(body)) return body
 
   return `<h2>Key Takeaways</h2>
 <ul>
@@ -119,7 +102,7 @@ ${body}`.trim()
 }
 
 function ensureFaq(body: string, keyword: string) {
-  if (/faq|frequently asked questions/i.test(body)) return body
+  if (/<h2[^>]*>\s*(FAQ|Frequently Asked Questions)\s*<\/h2>/i.test(body)) return body
 
   const topic = clean(keyword || 'this topic')
 
@@ -137,9 +120,7 @@ function ensureFaq(body: string, keyword: string) {
 }
 
 function ensureInternalLinks(body: string) {
-  if (/href=["']\/blog/i.test(body) || /href=["']\/editorial-standards/i.test(body)) {
-    return body
-  }
+  if (/href=["']\/blog/i.test(body) || /href=["']\/editorial-standards/i.test(body)) return body
 
   return `${body}
 
@@ -151,9 +132,7 @@ function ensureInternalLinks(body: string) {
 }
 
 function ensureConclusion(body: string) {
-  if (/bottom line|final thoughts|conclusion|next steps/i.test(body)) {
-    return body
-  }
+  if (/bottom line|final thoughts|conclusion|next steps/i.test(stripHtml(body))) return body
 
   return `${body}
 
@@ -193,7 +172,7 @@ function expandBody(body: string, keyword: string) {
 
 async function fixBody(post: any) {
   const keyword = clean(post.primary_keyword || post.title || 'this topic')
-  let body = await normalizeAndValidateLinksInHtml(clean(post.body))
+  let body = clean(post.body)
 
   if (!body) {
     body = `<p>This guide explains ${keyword} in plain English, with practical examples, common mistakes, and safe next steps.</p>`
@@ -205,24 +184,20 @@ async function fixBody(post: any) {
   body = ensureFaq(body, keyword)
   body = ensureInternalLinks(body)
   body = ensureConclusion(body)
+  body = await cleanupExternalLinks(body, { validateExternal: true, removeInvalid: true })
 
   return body
 }
 
 export async function POST(
-  request: Request,
+  _request: Request,
   context: { params: { postId?: string; id?: string } }
 ) {
   try {
-    const postIdFromParams = clean(context.params?.postId || context.params?.id)
-    const postIdFromUrl = clean(new URL(request.url).pathname.split('/').filter(Boolean).at(-2))
-    const postId = postIdFromParams || postIdFromUrl
+    const postId = clean(context.params?.postId || context.params?.id)
 
     if (!postId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing post ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: 'Missing post ID' }, { status: 400 })
     }
 
     const supabase = createAdminClient()
@@ -234,17 +209,11 @@ export async function POST(
       .maybeSingle()
 
     if (error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
     if (!post) {
-      return NextResponse.json(
-        { success: false, error: `Post not found: ${postId}` },
-        { status: 404 }
-      )
+      return NextResponse.json({ success: false, error: `Post not found: ${postId}` }, { status: 404 })
     }
 
     const title = fixTitle(post)
@@ -281,14 +250,12 @@ export async function POST(
             ?.map((check: any) => check.name || check.label || check.message)
             ?.filter(Boolean)
             ?.join('\n') || null,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', postId)
 
     if (updateError) {
-      return NextResponse.json(
-        { success: false, error: updateError.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ success: false, error: updateError.message }, { status: 500 })
     }
 
     await supabase.from('quality_checks').insert({
@@ -307,9 +274,8 @@ export async function POST(
     })
   } catch (err: any) {
     console.error('[fix-seo]', err)
-
     return NextResponse.json(
-      { success: false, error: err.message || 'Fix SEO failed' },
+      { success: false, error: err?.message || 'Fix SEO failed' },
       { status: 500 }
     )
   }

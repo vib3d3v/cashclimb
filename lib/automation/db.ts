@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase-server'
 import type { Category } from '@/types'
 import { buildArticleDraft, generateKeywordIdeas } from './content'
+import { cleanupExternalLinks } from '@/lib/normalize-links'
 
 function ensureCategory(category: string | null | undefined): Category {
   const allowed: Category[] = [
@@ -224,6 +225,10 @@ export async function createDraftFromKeyword(keywordId?: string | null): Promise
     })
 
     const uniqueSlug = await nextAvailableSlug(draft.slug)
+    const cleanedBody = await cleanupExternalLinks(draft.body, {
+      validateExternal: true,
+      removeInvalid: true,
+    })
 
     const { data: post, error: postError } = await supabase
       .from('posts')
@@ -231,7 +236,7 @@ export async function createDraftFromKeyword(keywordId?: string | null): Promise
         title: draft.title,
         slug: uniqueSlug,
         excerpt: draft.excerpt,
-        body: draft.body,
+        body: cleanedBody,
         category: draft.category,
         author: draft.author,
         cover_url: null,

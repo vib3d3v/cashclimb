@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase-server'
 import { getAuthorByName, resolvePostAuthorName } from '@/lib/authors'
+import LinkCleanupButton from '@/components/admin/LinkCleanupButton'
 import type { Post, Comment } from '@/types'
 
 function formatDate(date?: string | null) {
@@ -109,6 +110,15 @@ export default async function AdminDashboardPage() {
             <p className="mt-3 text-3xl font-serif font-black text-[#F0EDE8]">{needsReview.length}</p>
             <p className="mt-2 text-sm text-[#9A9490]">Drafts or review items needing attention.</p>
             <Link href="/admin/workflow" className="mt-4 inline-flex text-sm font-semibold text-gold hover:opacity-80">Open workflow →</Link>
+          </section>
+
+
+
+          <section className="rounded-2xl border border-border bg-bg-2 p-5">
+            <p className="text-xs uppercase tracking-widest text-gold font-bold">Site health</p>
+            <p className="mt-3 text-3xl font-serif font-black text-[#F0EDE8]">Links</p>
+            <p className="mt-2 text-sm text-[#9A9490]">Scan posts, replace known dead source URLs, and remove confirmed broken external links.</p>
+            <LinkCleanupButton />
           </section>
 
           <section className="rounded-2xl border border-border bg-bg-2 p-5">

@@ -1,98 +1,79 @@
-const INTERNAL_HOSTS = new Set(['cashclimb.org', 'www.cashclimb.org'])
+export type LinkCleanupOptions = {
+  validateExternal?: boolean
+  removeInvalid?: boolean
+  replaceKnownBad?: boolean
+}
 
-const KNOWN_URL_REPLACEMENTS: Record<string, string> = {
+const KNOWN_REPLACEMENTS: Record<string, string> = {
   'https://www.consumerfinance.gov/consumer-tools/bankruptcy/':
-    'https://www.consumerfinance.gov/ask-cfpb/how-long-does-a-bankruptcy-appear-on-credit-reports-en-325/',
-  'https://consumerfinance.gov/consumer-tools/bankruptcy/':
-    'https://www.consumerfinance.gov/ask-cfpb/how-long-does-a-bankruptcy-appear-on-credit-reports-en-325/',
+    'https://www.consumerfinance.gov/consumer-tools/',
   'https://www.fca.org.uk/consumers/credit-scores-checking-and-improving-credit-report':
-    'https://www.fca.org.uk/consumers',
-  'https://fca.org.uk/consumers/credit-scores-checking-and-improving-credit-report':
     'https://www.fca.org.uk/consumers',
   'https://www.irs.gov/newsroom/bonuses-and-other-supplemental-wages':
     'https://www.irs.gov/publications/p15',
-  'https://irs.gov/newsroom/bonuses-and-other-supplemental-wages':
-    'https://www.irs.gov/publications/p15',
   'https://www.moneyhelper.org.uk/en/investing/regular-investing':
-    'https://www.moneyhelper.org.uk/en/savings/investing/investing-beginners-guide',
-  'https://moneyhelper.org.uk/en/investing/regular-investing':
-    'https://www.moneyhelper.org.uk/en/savings/investing/investing-beginners-guide',
+    'https://www.moneyhelper.org.uk/en/savings/investing',
 }
 
-const TRUSTED_FALLBACKS_BY_HOST: Record<string, string> = {
-  'consumerfinance.gov': 'https://www.consumerfinance.gov/consumer-tools/',
-  'www.consumerfinance.gov': 'https://www.consumerfinance.gov/consumer-tools/',
-  'fca.org.uk': 'https://www.fca.org.uk/consumers',
-  'www.fca.org.uk': 'https://www.fca.org.uk/consumers',
-  'irs.gov': 'https://www.irs.gov/publications/p15',
-  'www.irs.gov': 'https://www.irs.gov/publications/p15',
-  'moneyhelper.org.uk': 'https://www.moneyhelper.org.uk/en/savings/investing',
-  'www.moneyhelper.org.uk': 'https://www.moneyhelper.org.uk/en/savings/investing',
+const INTERNAL_DOMAINS = [
+  'cashclimb.org',
+  'www.cashclimb.org',
+  'https://cashclimb.org',
+  'https://www.cashclimb.org',
+  'http://cashclimb.org',
+  'http://www.cashclimb.org',
+]
+
+function safeString(value: unknown) {
+  return String(value || '').trim()
 }
 
-function safeDecode(value: string) {
-  try {
-    return decodeURIComponent(value)
-  } catch {
-    return value
-  }
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function canonicalizeForLookup(value: string) {
-  return String(value || '')
-    .trim()
-    .replace(/&amp;/g, '&')
-    .replace(/#.*$/, '')
-    .replace(/\?$/, '')
-}
-
-export function knownReplacementForHref(href: string) {
-  const normalized = normalizeHref(href)
-  const key = canonicalizeForLookup(normalized)
-  return KNOWN_URL_REPLACEMENTS[key] || KNOWN_URL_REPLACEMENTS[`${key}/`] || null
+function stripTrailingSlashOnly(value: string) {
+  if (value === '/') return value
+  return value.replace(/\/+$/, '')
 }
 
 export function normalizeHref(href: string) {
-  const raw = String(href || '').trim()
+  const value = safeString(href)
 
-  if (!raw) return ''
-  if (raw.startsWith('#')) return raw
-  if (raw.startsWith('/')) return raw
-  if (/^(mailto|tel|sms):/i.test(raw)) return raw
+  if (!value) return ''
+  if (value.startsWith('#')) return value
+  if (value.startsWith('/')) return value
+  if (value.startsWith('mailto:')) return value
+  if (value.startsWith('tel:')) return value
 
-  const cleaned = raw.replace(/&amp;/g, '&')
-
-  if (/^https?:\/\//i.test(cleaned)) {
-    try {
-      const url = new URL(cleaned)
-      if (INTERNAL_HOSTS.has(url.hostname.toLowerCase())) {
-        return `${url.pathname}${url.search}${url.hash}` || '/'
-      }
-      url.protocol = 'https:'
-      const normalized = url.toString()
-      return KNOWN_URL_REPLACEMENTS[canonicalizeForLookup(normalized)] || normalized
-    } catch {
-      return cleaned
+  for (const domain of INTERNAL_DOMAINS) {
+    if (value === domain) return '/'
+    if (value.startsWith(`${domain}/`)) {
+      const internalPath = value.replace(domain, '')
+      return internalPath.startsWith('/') ? internalPath : `/${internalPath}`
     }
   }
 
-  const withoutProtocol = cleaned.replace(/^\/\//, '')
-  const firstPart = withoutProtocol.split('/')[0]?.toLowerCase() || ''
-
-  if (INTERNAL_HOSTS.has(firstPart)) {
-    const path = withoutProtocol.slice(firstPart.length)
-    return path.startsWith('/') ? path : `/${path}`
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value
   }
 
-  const normalized = `https://${withoutProtocol}`
-  return KNOWN_URL_REPLACEMENTS[canonicalizeForLookup(normalized)] || normalized
+  return `https://${value}`
 }
 
-function isExternalHttpUrl(href: string) {
-  return /^https?:\/\//i.test(href)
+function replaceKnownBadUrl(href: string) {
+  const direct = KNOWN_REPLACEMENTS[href]
+  if (direct) return direct
+
+  const withoutSlash = stripTrailingSlashOnly(href)
+  const match = Object.entries(KNOWN_REPLACEMENTS).find(
+    ([bad]) => stripTrailingSlashOnly(bad) === withoutSlash
+  )
+
+  return match?.[1] || null
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 7000) {
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 8000) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
@@ -100,115 +81,88 @@ async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs =
     return await fetch(url, {
       ...init,
       signal: controller.signal,
-      headers: {
-        'user-agent': 'CashClimb-LinkChecker/1.0',
-        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        ...(init.headers || {}),
-      },
-      redirect: 'follow',
     })
   } finally {
     clearTimeout(timeout)
   }
 }
 
-export async function isLiveExternalUrl(href: string) {
-  const url = normalizeHref(href)
-
-  if (!isExternalHttpUrl(url)) return true
-
+async function isValidExternalUrl(url: string) {
   try {
-    let response = await fetchWithTimeout(url, { method: 'HEAD' })
+    const head = await fetchWithTimeout(url, {
+      method: 'HEAD',
+      redirect: 'follow',
+      cache: 'no-store',
+    })
 
-    if (response.status === 405 || response.status === 403) {
-      response = await fetchWithTimeout(url, { method: 'GET' })
-    }
+    if (head.ok) return true
 
-    return response.status >= 200 && response.status < 400
+    const get = await fetchWithTimeout(url, {
+      method: 'GET',
+      redirect: 'follow',
+      cache: 'no-store',
+    })
+
+    return get.ok
   } catch {
     return false
   }
 }
 
-export async function validateAndNormalizeHref(href: string) {
-  const normalized = normalizeHref(safeDecode(href))
-  const knownReplacement = knownReplacementForHref(normalized)
-  const candidate = knownReplacement || normalized
-
-  if (!candidate || !isExternalHttpUrl(candidate)) {
-    return candidate
-  }
-
-  if (await isLiveExternalUrl(candidate)) {
-    return candidate
-  }
-
-  try {
-    const host = new URL(candidate).hostname.toLowerCase()
-    const fallback = TRUSTED_FALLBACKS_BY_HOST[host]
-
-    if (fallback && fallback !== candidate && (await isLiveExternalUrl(fallback))) {
-      return fallback
-    }
-  } catch {
-    // fall through and remove the bad link
-  }
-
-  return ''
-}
-
 export function normalizeLinksInHtml(html: string) {
   return String(html || '').replace(
-    /href=(['"])(.*?)\1/gi,
-    (_match, quote, href) => `href=${quote}${normalizeHref(safeDecode(href))}${quote}`
+    /href=["']([^"']+)["']/gi,
+    (_, href) => `href="${normalizeHref(href)}"`
   )
 }
 
-export async function normalizeAndValidateLinksInHtml(html: string) {
-  let output = String(html || '')
+export async function normalizeAndValidateLinksInHtml(
+  html: string,
+  options: LinkCleanupOptions = {}
+) {
+  const shouldValidate = options.validateExternal ?? true
+  const shouldRemoveInvalid = options.removeInvalid ?? true
+  const shouldReplaceKnownBad = options.replaceKnownBad ?? true
 
-  const anchorPattern = /<a\b([^>]*?)href=(['"])(.*?)\2([^>]*)>([\s\S]*?)<\/a>/gi
-  const anchors = Array.from(output.matchAll(anchorPattern))
+  let output = normalizeLinksInHtml(html)
+  const matches = Array.from(output.matchAll(/href=["']([^"']+)["']/gi))
 
-  for (const match of anchors) {
-    const [full, beforeHref, quote, href, afterHref, innerHtml] = match
-    const normalized = await validateAndNormalizeHref(href)
+  for (const match of matches) {
+    const href = safeString(match[1])
 
-    if (!normalized) {
-      output = output.replace(full, innerHtml)
-      continue
+    if (!href) continue
+    if (href.startsWith('/') || href.startsWith('#')) continue
+    if (href.startsWith('mailto:') || href.startsWith('tel:')) continue
+
+    if (shouldReplaceKnownBad) {
+      const replacement = replaceKnownBadUrl(href)
+      if (replacement) {
+        output = output.replaceAll(href, replacement)
+        continue
+      }
     }
 
-    const safeAttrs = `${beforeHref}${afterHref}`
-      .replace(/\s+/g, ' ')
-      .replace(/\s(target|rel)=(["']).*?\2/gi, '')
-      .trim()
+    if (!shouldValidate) continue
+    if (!href.startsWith('http://') && !href.startsWith('https://')) continue
 
-    const externalAttrs = isExternalHttpUrl(normalized)
-      ? ' target="_blank" rel="noopener noreferrer"'
-      : ''
+    const valid = await isValidExternalUrl(href)
 
-    const attrs = safeAttrs ? ` ${safeAttrs}` : ''
-    output = output.replace(
-      full,
-      `<a${attrs} href=${quote}${normalized}${quote}${externalAttrs}>${innerHtml}</a>`
-    )
-  }
+    if (!valid && shouldRemoveInvalid) {
+      const linkRegex = new RegExp(
+        `<a[^>]*href=["']${escapeRegExp(href)}["'][^>]*>(.*?)<\\/a>`,
+        'gis'
+      )
 
-  const hrefPattern = /href=(['"])(.*?)\1/gi
-  const hrefs = Array.from(output.matchAll(hrefPattern))
-
-  for (const match of hrefs) {
-    const [full, quote, href] = match
-    const normalized = await validateAndNormalizeHref(href)
-
-    if (!normalized) {
-      output = output.replace(full, '')
-      continue
+      output = output.replace(linkRegex, '$1')
     }
-
-    output = output.replace(full, `href=${quote}${normalized}${quote}`)
   }
 
   return output
+}
+
+export async function cleanupExternalLinks(
+  html: string,
+  options: LinkCleanupOptions = {}
+) {
+  return normalizeAndValidateLinksInHtml(html, options)
 }
