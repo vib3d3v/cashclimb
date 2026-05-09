@@ -9,9 +9,9 @@ if (!url || !key) {
 
 const supabase = createClient(url, key)
 
-const resourceLinks = {
+const officialLinks = {
   Retirement: [
-    ['IRS retirement plans', 'https://www.irs.gov/retirement-plans'],
+    ['IRS retirement plan resources', 'https://www.irs.gov/retirement-plans'],
     ['SEC Investor.gov retirement toolkit', 'https://www.investor.gov/additional-resources/retirement-toolkit'],
     ['Social Security Administration', 'https://www.ssa.gov/'],
   ],
@@ -28,7 +28,7 @@ const resourceLinks = {
     ['IRS tax withholding estimator', 'https://www.irs.gov/individuals/tax-withholding-estimator'],
   ],
   'Real Estate': [
-    ['CFPB buying a house', 'https://www.consumerfinance.gov/owning-a-home/'],
+    ['CFPB home buying guide', 'https://www.consumerfinance.gov/owning-a-home/'],
     ['HUD homebuying resources', 'https://www.hud.gov/topics/buying_a_home'],
   ],
   'Personal Finance': [
@@ -72,9 +72,30 @@ function titleCase(s) {
   return String(s || '').replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
 }
 
-function resources(category) {
-  const links = resourceLinks[category] || resourceLinks['Personal Finance']
-  return `<h2>Helpful official resources</h2>\n<ul>${links.map(([t, h]) => `<li><a href="${h}" target="_blank" rel="noopener noreferrer">${t}</a></li>`).join('')}</ul>`
+function inferCategory(post) {
+  const text = `${post.title || ''} ${post.primary_keyword || ''} ${post.category || ''}`.toLowerCase()
+  if (/retirement|401k|401\(k\)|ira|social security|pension|roth|catch.?up/.test(text)) return 'Retirement'
+  if (/credit|card|fico|score|balance transfer|debt/.test(text)) return 'Credit'
+  if (/invest|brokerage|stock|etf|fund|portfolio/.test(text)) return 'Investing'
+  if (/tax|irs|deduction|refund|withholding/.test(text)) return 'Taxes'
+  if (/home|mortgage|rent|buy|real estate|closing cost/.test(text)) return 'Real Estate'
+  return post.category && officialLinks[post.category] ? post.category : 'Personal Finance'
+}
+
+function sourceSentence(category) {
+  const links = officialLinks[category] || officialLinks['Personal Finance']
+  const linked = links.map(([title, href]) => `<a href="${href}" target="_blank" rel="noopener noreferrer">${title}</a>`)
+  if (category === 'Retirement') return `<p>Before acting, verify current retirement account rules through ${linked[0]}, ${linked[1]}, and ${linked[2]}.</p>`
+  if (category === 'Credit') return `<p>For current credit card rules and consumer protections, check ${linked[0]} and ${linked[1]}.</p>`
+  if (category === 'Investing') return `<p>For investor education and risk basics, review ${linked[0]} and ${linked[1]}.</p>`
+  if (category === 'Taxes') return `<p>For current tax rules, check ${linked[0]} and ${linked[1]} before acting.</p>`
+  if (category === 'Real Estate') return `<p>For homebuying rules and cost checklists, review ${linked[0]} and ${linked[1]}.</p>`
+  return `<p>For current consumer finance guidance, review ${linked[0]} and ${linked[1]}.</p>`
+}
+
+function removeSection(html, heading) {
+  const escaped = escRegExp(heading)
+  return html.replace(new RegExp(`<h2>${escaped}<\\/h2>[\\s\\S]*?(?=<h2>|$)`, 'gi'), '')
 }
 
 function cleanBody(body, keyword, category) {
@@ -83,6 +104,10 @@ function cleanBody(body, keyword, category) {
   const cap = titleCase(kw)
   const kwRe = escRegExp(kw)
   const capRe = escRegExp(cap)
+
+  html = removeSection(html, 'Data and sources to verify')
+  html = removeSection(html, 'Tools and accounts that can help')
+  html = removeSection(html, 'Helpful official resources')
 
   if (kw) {
     html = html.replace(new RegExp(`<p>${capRe} is a decision area where small details can change the outcome\\. Fees, interest rates, account rules, tax treatment, deadlines, and timing can all matter\\. A strong article or plan should explain these details clearly instead of making broad promises\\.</p>`, 'gi'), '<p>Small details can change the outcome. Fees, interest rates, account rules, tax treatment, deadlines, and timing can all matter. A useful plan explains these details clearly instead of making broad promises.</p>')
@@ -99,23 +124,26 @@ function cleanBody(body, keyword, category) {
   html = html.replace(/<p>Choose one action from this guide and do it this week\. A clear next step is usually more valuable than trying to solve the whole problem in one sitting\.<\/p>/gi, '<p>Choose one practical action that improves your position without creating unnecessary risk.</p>')
   html = html.replace(/<p>Pick one action from this guide and do it this week\. Small, repeatable progress is usually more useful than trying to fix everything at once\.<\/p>/gi, '<p>Pick one realistic improvement, gather the numbers, and compare the tradeoffs before acting.</p>')
 
-  if (!/<h2>Helpful official resources<\/h2>/i.test(html)) {
-    html = html.replace(/<h2>FAQ<\/h2>/i, `${resources(category)}\n<h2>FAQ</h2>`)
+  if (!/consumerfinance\.gov|irs\.gov|investor\.gov|ssa\.gov|finra\.org|hud\.gov|fdic\.gov/i.test(html)) {
+    html = html.replace(/<h2>FAQ<\/h2>/i, `${sourceSentence(category)}\n<h2>FAQ</h2>`)
   }
 
-  return html
+  return html.replace(/\n{3,}/g, '\n\n').trim()
 }
 
 const { data: posts, error } = await supabase.from('posts').select('id,title,body,primary_keyword,category')
 if (error) throw error
+
 let changed = 0
 for (const post of posts || []) {
-  const next = cleanBody(post.body, post.primary_keyword || post.title, post.category || 'Personal Finance')
+  const category = inferCategory(post)
+  const next = cleanBody(post.body, post.primary_keyword || post.title, category)
   if (next !== post.body) {
-    const { error: updateError } = await supabase.from('posts').update({ body: next, updated_at: new Date().toISOString() }).eq('id', post.id)
+    const { error: updateError } = await supabase.from('posts').update({ body: next, category, updated_at: new Date().toISOString() }).eq('id', post.id)
     if (updateError) throw updateError
     changed++
     console.log(`updated: ${post.title}`)
   }
 }
+
 console.log(`Done. Updated ${changed} posts.`)
