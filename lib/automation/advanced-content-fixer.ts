@@ -30,8 +30,7 @@ function wordCount(html = '') {
 }
 
 function escapeHtml(value: any = '') {
-  const safe = String(value || '')
-  return safe
+  return String(value || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -41,6 +40,10 @@ function escapeHtml(value: any = '') {
 
 function p(text: string) {
   return `<p>${escapeHtml(text)}</p>`
+}
+
+function rawP(html: string) {
+  return `<p>${html}</p>`
 }
 
 function list(items: string[]) {
@@ -71,20 +74,34 @@ function primaryKeyword(post: any) {
 }
 
 function readTimeFor(html: string) {
-  const minutes = Math.max(1, Math.ceil(wordCount(html) / 220))
-  return `${minutes} min read`
+  return `${Math.max(1, Math.ceil(wordCount(html) / 220))} min read`
 }
 
 function appendSection(html: string, heading: string, body: string) {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const exists = new RegExp(`<h2[^>]*>\\s*${escaped}\\s*<\\/h2>`, 'i').test(html)
-  if (exists) return html
+  if (new RegExp(`<h2[^>]*>\\s*${escaped}\\s*<\\/h2>`, 'i').test(html)) return html
   return `${html}\n<h2>${heading}</h2>\n${body}`
 }
 
-function sanitizeAdvisoryPhrasing(html: string) {
-  let out = html
+function removeSection(html: string, heading: string) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return html.replace(new RegExp(`<h2[^>]*>\\s*${escaped}\\s*<\\/h2>[\\s\\S]*?(?=<h2|$)`, 'gi'), '')
+}
 
+function removeBadFillerSections(html: string) {
+  let out = html
+  for (const heading of [
+    'Data and sources to verify',
+    'Tools and accounts that can help',
+    'Helpful official resources',
+    'How CashClimb readers can use this guide',
+  ]) {
+    out = removeSection(out, heading)
+  }
+  return out
+}
+
+function sanitizeAdvisoryPhrasing(html: string) {
   const replacements: Array<[RegExp, string]> = [
     [/\byou should\b/gi, 'you may want to'],
     [/\byou need to\b/gi, 'you may need to'],
@@ -92,27 +109,14 @@ function sanitizeAdvisoryPhrasing(html: string) {
     [/\balways\b/gi, 'often'],
     [/\bnever\b/gi, 'rarely'],
     [/\bthe best option is\b/gi, 'one option to compare is'],
-    [/\bthe right choice is\b/gi, 'the right choice may depend on your situation and could be'],
     [/\bguaranteed\b/gi, 'possible'],
     [/\brisk-free\b/gi, 'lower-risk'],
-    [/\bthis is financial advice\b/gi, 'this is general financial education'],
-    [/\bthis is tax advice\b/gi, 'this is general tax education'],
-    [/\bthis is legal advice\b/gi, 'this is general legal education'],
-    [/\bpersonalized advice\b/gi, 'general education'],
-    [/\bmake sure you\b/gi, 'consider whether you should'],
-    [/\bthe smartest move is\b/gi, 'a practical next step may be'],
-    [/\bthe safest approach is\b/gi, 'a lower-risk approach may be'],
-    [/\bdo this before\b/gi, 'consider doing this before'],
-    [/\bin conclusion,? this article\b/gi, 'the bottom line'],
     [/\bwhen it comes to\b/gi, 'for'],
     [/\bin today'?s world\b/gi, 'today'],
-    [/\bnavigating the\b/gi, 'understanding the'],
     [/\bdelve into\b/gi, 'explain'],
     [/\bit is important to note that\b/gi, 'note that'],
   ]
-
-  for (const [pattern, replacement] of replacements) out = out.replace(pattern, replacement)
-  return out
+  return replacements.reduce((out, [pattern, replacement]) => out.replace(pattern, replacement), html)
 }
 
 function ensureGeneralDisclaimer(html: string, category: Category) {
@@ -121,100 +125,70 @@ function ensureGeneralDisclaimer(html: string, category: Category) {
   return `${p('This article is for general educational purposes only and is not personal financial, investment, tax, or legal advice. Consider your full situation and speak with a qualified professional before making major money decisions.')}\n${html}`
 }
 
-function buildScenario(keyword: string, category: Category) {
-  return [
-    p(`For example, imagine a reader comparing two choices related to ${keyword}. The first option looks easier because the monthly cost is lower. The second option looks less convenient, but it may leave more cash available for emergencies or reduce long-term risk. That is why the better answer cannot be based on one number alone.`),
-    p(`A practical comparison would look at the upfront cost, monthly effect, total cost over time, flexibility, tax treatment, and what happens if income changes. For ${category.toLowerCase()} decisions, those details often matter more than the headline benefit.`),
-  ].join('\n')
+function officialSourceParagraph(category: Category) {
+  if (category === 'Retirement') {
+    return rawP('For current retirement account rules, check <a href="https://www.irs.gov/retirement-plans" target="_blank" rel="noopener noreferrer">IRS retirement plan resources</a> before acting.')
+  }
+  if (category === 'Credit') {
+    return rawP('For current credit card rules and consumer protections, check the <a href="https://www.consumerfinance.gov/consumer-tools/credit-cards/" target="_blank" rel="noopener noreferrer">CFPB credit card resources</a>.')
+  }
+  if (category === 'Investing') {
+    return rawP('For investor education and risk basics, review <a href="https://www.investor.gov/" target="_blank" rel="noopener noreferrer">SEC Investor.gov</a>.')
+  }
+  if (category === 'Taxes') {
+    return rawP('For current tax rules, check <a href="https://www.irs.gov/individuals" target="_blank" rel="noopener noreferrer">IRS individual tax resources</a>.')
+  }
+  if (category === 'Real Estate') {
+    return rawP('For homebuying rules and cost checklists, review the <a href="https://www.consumerfinance.gov/owning-a-home/" target="_blank" rel="noopener noreferrer">CFPB home buying guide</a>.')
+  }
+  return rawP('For current consumer finance guidance, review the <a href="https://www.consumerfinance.gov/consumer-tools/" target="_blank" rel="noopener noreferrer">CFPB consumer tools</a>.')
 }
 
-function buildDepthSections(html: string, keyword: string, category: Category) {
+function buildUsefulDepthSections(html: string, keyword: string, category: Category) {
   let out = html
 
-  out = appendSection(
-    out,
-    'How to compare the tradeoffs',
-    [
-      p('A stronger decision starts with the tradeoffs. Do not compare only the most attractive number. Compare the cost, timeline, risk, flexibility, and the amount of effort required to keep the plan working.'),
-      list([
-        'Cost: check upfront fees, recurring costs, interest, taxes, penalties, and opportunity cost.',
-        'Timeline: decide whether the choice needs to work for weeks, years, or decades.',
-        'Risk: ask what could go wrong if income, rates, rules, or market conditions change.',
-        'Flexibility: compare how easy it is to adjust the decision later.',
-        'Proof: verify current figures with official sources before publishing or acting.',
-      ]),
-    ].join('\n')
-  )
+  out = appendSection(out, 'How to make the decision practical', [
+    p('Start by turning the topic into a real decision. Write down the action being considered, the amount of money involved, the timing, and what could go wrong if income, rates, fees, or account rules change.'),
+    p('A useful article should explain the tradeoff instead of adding broad advice. Readers need to know what helps, what can backfire, and what number to check before acting.'),
+  ].join('\n'))
 
-  out = appendSection(
-    out,
-    'Example scenario',
-    buildScenario(keyword, category)
-  )
+  out = appendSection(out, 'Example', [
+    p(`For example, a reader comparing options related to ${keyword} might see one choice that looks easier today and another that is slower but safer. The better choice depends on cash flow, fees, timing, flexibility, and whether the decision creates risk later.`),
+    p('That comparison is more helpful than a generic rule because it shows how the decision changes when the reader has irregular income, high-interest debt, a thin emergency fund, or a short deadline.'),
+  ].join('\n'))
 
-  out = appendSection(
-    out,
-    'Common mistakes to avoid',
-    [
-      p('Many readers make the decision harder by treating a general rule like a personal recommendation. A rule of thumb can be useful, but it should still be checked against income, debts, tax position, account rules, location, and time horizon.'),
-      list([
-        'Choosing the lowest monthly payment without checking total cost.',
-        'Ignoring how fees, taxes, rates, or deadlines change the real outcome.',
-        'Assuming a strategy works the same way in every country or account type.',
-        'Following a generic recommendation without checking risk tolerance or cash flow.',
-        'Skipping source checks for current contribution limits, tax thresholds, or lending rules.',
-      ]),
-    ].join('\n')
-  )
+  out = appendSection(out, 'Common mistakes to avoid', [
+    list([
+      'Comparing only one number, such as a monthly payment, rate, or projected return.',
+      'Ignoring fees, tax treatment, deadlines, account rules, or penalties.',
+      'Assuming a strategy works the same way for every reader.',
+      'Making the next step too large to maintain consistently.',
+      'Skipping current source checks when rules or limits may have changed.',
+    ]),
+  ].join('\n'))
 
-  out = appendSection(
-    out,
-    'A practical review checklist',
-    [
-      p('Use this checklist before treating the decision as finished. The goal is not to find a perfect answer. The goal is to remove obvious risks and make the next step easier to explain.'),
-      list([
-        'Write the exact decision in one sentence.',
-        'List the numbers needed to compare the options fairly.',
-        'Check whether the decision affects taxes, credit, retirement accounts, property, or legal documents.',
-        'Identify one downside that would make the choice less attractive.',
-        'Decide what information needs expert review before publishing or acting.',
-      ]),
-    ].join('\n')
-  )
-
-  out = appendSection(
-    out,
-    'What to verify before acting',
-    [
-      p('Before acting, verify anything that can change. Rates, tax thresholds, account limits, government rules, and lender policies can become outdated quickly. A good article points readers toward current sources rather than pretending one static answer fits every case.'),
-      p('For CashClimb, this is also an editorial quality step. Articles should explain the decision clearly, avoid promises, show the tradeoffs, and leave room for professional advice when the topic involves taxes, investing, property, retirement, or legal documents.'),
-    ].join('\n')
-  )
+  out = appendSection(out, 'Before you act', [
+    p('Check the current numbers, read the account terms, and compare at least one safer alternative. If the decision affects taxes, investing, retirement accounts, property, legal documents, or large debts, consider getting qualified help.'),
+    officialSourceParagraph(category),
+  ].join('\n'))
 
   return out
 }
 
-function ensureConclusion(html: string, keyword: string) {
-  if (/what you can do next|next steps|the bottom line|final thoughts/i.test(stripHtml(html))) return html
-  return `${html}\n<h2>What you can do next</h2>\n${p(`Use ${keyword} as a starting point, not a final instruction. Gather the numbers, compare the tradeoffs, check current rules, and choose one low-risk next step that fits your situation.`)}`
+function ensureConclusion(html: string) {
+  if (/next steps|the bottom line|final thoughts/i.test(stripHtml(html))) return html
+  return `${html}\n<h2>Next steps</h2>\n${p('Pick one practical action, gather the numbers, and compare the tradeoffs before acting. A smaller step that you can maintain is usually more useful than a rushed change that creates new problems.')}`
 }
 
-function ensureFaq(html: string, keyword: string) {
+function ensureFaq(html: string) {
   if (/<h2[^>]*>\s*(faq|frequently asked questions)\s*<\/h2>/i.test(html)) return html
-  return `${html}\n<h2>FAQ</h2>\n<h3>Is ${escapeHtml(keyword)} the same for everyone?</h3>\n${p('No. The right approach can vary by income, country, tax position, debt level, timeline, risk tolerance, and existing financial commitments.')}\n<h3>What is the first thing to compare?</h3>\n${p('Start with total cost, flexibility, risk, and timing. Those factors usually reveal more than one headline number.')}\n<h3>When is professional help worth considering?</h3>\n${p('Consider qualified help when the decision involves taxes, investments, retirement accounts, property, legal documents, business income, or large debt balances.')}`
-}
-
-function ensureNaturalKeywordOpening(html: string, keyword: string) {
-  const lower = stripHtml(html).toLowerCase()
-  if (lower.slice(0, 600).includes(keyword.toLowerCase())) return html
-  return `${p(`${titleCase(keyword)} is easier to evaluate when the decision is broken into costs, timing, risk, flexibility, and next steps.`)}\n${html}`
+  return `${html}\n<h2>FAQ</h2>\n<h3>Does the same advice work for everyone?</h3>\n${p('No. The right approach can vary by income, debt level, country, account type, tax position, time horizon, and risk tolerance.')}\n<h3>What should I compare first?</h3>\n${p('Start with cost, timing, flexibility, downside risk, and whether the decision can be reversed without major damage.')}\n<h3>When is professional help worth considering?</h3>\n${p('Consider qualified help when the decision involves taxes, investments, retirement accounts, property, legal documents, business income, or large debt balances.')}`
 }
 
 function trimSeoTitle(value: string, keyword: string) {
   const fallback = `${titleCase(keyword)} Guide`
   const base = String(value || fallback).replace(/\s+/g, ' ').trim()
-  if (base.length >= 40 && base.length <= 65) return base
-  return fallback.slice(0, 65)
+  return base.length >= 40 && base.length <= 65 ? base : fallback.slice(0, 65)
 }
 
 function trimSeoDescription(value: string, keyword: string) {
@@ -280,30 +254,18 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   })
 
   let body = String(post.body || '')
+  body = removeBadFillerSections(body)
   body = sanitizeAdvisoryPhrasing(body)
   body = ensureGeneralDisclaimer(body, category)
-  body = ensureNaturalKeywordOpening(body, keyword)
-  body = buildDepthSections(body, keyword, category)
-  body = ensureFaq(body, keyword)
-  body = ensureConclusion(body, keyword)
-
-  // A second pass is intentional. Short generated drafts often need another section after the first expansion.
-  if (wordCount(body) < 900) {
-    body = appendSection(
-      body,
-      'How CashClimb readers can use this guide',
-      [
-        p('The most useful way to use this guide is to turn it into a decision note. Write the choice at the top, list the numbers you know, list the information you still need, and mark anything that requires a current source or professional review.'),
-        p('This keeps the article practical without becoming personal advice. It also makes the content more useful for readers because the next step is clear, cautious, and based on comparison rather than pressure.'),
-      ].join('\n')
-    )
-  }
+  body = buildUsefulDepthSections(body, keyword, category)
+  body = ensureFaq(body)
+  body = ensureConclusion(body)
+  body = body.replace(/\n{3,}/g, '\n\n').trim()
 
   const title = post.title || `${titleCase(keyword)}: Step-by-Step Guide`
   const excerpt = post.excerpt || `Learn ${keyword} with practical examples, common mistakes, safer next steps, and a clear checklist for everyday financial decisions.`
   const seoTitle = trimSeoTitle(post.seo_title || title, keyword)
   const seoDescription = trimSeoDescription(post.seo_description || excerpt, keyword)
-  const readTime = readTimeFor(body)
 
   const after = evaluateFinanceArticle({
     title,
@@ -319,18 +281,17 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   const beforeFailed = before.checks.filter((check) => !check.passed).map((check) => check.name)
   const fixesApplied = beforeFailed.filter((name) => after.checks.find((check) => check.name === name)?.passed)
   const unresolved = after.checks.filter((check) => !check.passed).map((check) => check.name)
-  const nextStatus = nextStatusFromEvaluation(after)
 
   const updatedPost = await safeUpdatePost(postId, {
     title,
     excerpt,
     body,
-    read_time: readTime,
+    read_time: readTimeFor(body),
     seo_title: seoTitle,
     seo_description: seoDescription,
     quality_score: after.score,
     risk_level: after.risk_level,
-    status: nextStatus,
+    status: nextStatusFromEvaluation(after),
     review_notes: unresolved.length
       ? `Advanced content fixer applied. Still needs review: ${unresolved.join(', ')}.`
       : `Advanced content fixer applied. Score ${after.score}.`,
