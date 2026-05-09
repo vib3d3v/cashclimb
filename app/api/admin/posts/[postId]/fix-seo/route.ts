@@ -15,22 +15,6 @@ function stripHtml(value: any = '') {
   return clean(value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function wordCount(value: any = '') {
-  return stripHtml(value).split(/\s+/).filter(Boolean).length
-}
-
-function titleCase(value: any = '') {
-  return clean(value)
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) =>
-      word.length <= 3
-        ? word.toLowerCase()
-        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    )
-    .join(' ')
-}
-
 function trimTo(value: any = '', max = 160) {
   const text = clean(value)
   if (text.length <= max) return text
@@ -48,27 +32,15 @@ function removeGenericSuffix(value: any = '') {
 function fixTitle(post: any) {
   const keyword = clean(post.primary_keyword || post.title || 'personal finance guide')
   let title = removeGenericSuffix(post.title)
-
-  if (!title || title.length < 35) {
-    title = `${titleCase(keyword)}: Step-by-Step Guide`
-  }
-
-  if (keyword && !title.toLowerCase().includes(keyword.toLowerCase())) {
-    title = `${titleCase(keyword)}: ${title}`
-  }
-
+  if (!title || title.length < 35) title = keyword
   return trimTo(removeGenericSuffix(title), 70)
 }
 
 function fixExcerpt(post: any, title: string) {
   const current = clean(post.excerpt)
   if (current.length >= 90 && current.length <= 180) return current
-
   const topic = clean(post.primary_keyword || title).toLowerCase()
-  return trimTo(
-    `Learn ${topic} with a clear checklist, practical examples, common mistakes, and safe next steps for everyday money decisions.`,
-    180
-  )
+  return trimTo(`A practical guide to ${topic}, including what to compare, common mistakes, and safer next steps.`, 180)
 }
 
 function fixSeoTitle(post: any, title: string) {
@@ -83,22 +55,36 @@ function fixSeoDescription(post: any, excerpt: string) {
   return trimTo(excerpt, 160)
 }
 
-function ensureDisclaimer(body: string) {
-  if (/not personal financial|general educational purposes|not financial advice/i.test(body)) return body
-  return `<p><em>This article is for general educational purposes and is not personal financial, investment, tax, or legal advice.</em></p>\n\n${body}`.trim()
+function removeSection(body: string, heading: string) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return body.replace(new RegExp(`<h2[^>]*>\\s*${escaped}\\s*<\\/h2>[\\s\\S]*?(?=<h2|$)`, 'gi'), '').trim()
 }
 
-function ensureKeyTakeaways(body: string) {
-  if (/<h2[^>]*>\s*Key Takeaways\s*<\/h2>/i.test(body)) return body
+function removeBadSections(body: string) {
+  let out = body
+  const headings = [
+    'How to Think About [^<]+',
+    'Data and sources to verify',
+    'Tools and accounts that can help',
+    'Helpful official resources',
+    'Simple Checklist',
+    'A simple framework to use',
+    'How to make the decision practical',
+    'How CashClimb readers can use this guide',
+  ]
 
-  return `<h2>Key Takeaways</h2>
-<ul>
-  <li>Start by understanding the main decision before comparing options.</li>
-  <li>Review costs, timing, risks, and your personal financial situation together.</li>
-  <li>Use this guide as an educational checklist, not personal financial advice.</li>
-</ul>
+  for (const heading of headings) {
+    out = out.replace(new RegExp(`<h2[^>]*>\\s*${heading}\\s*<\\/h2>[\\s\\S]*?(?=<h2|$)`, 'gi'), '')
+  }
 
-${body}`.trim()
+  return out.replace(/\n{3,}/g, '\n\n').trim()
+}
+
+function ensureDisclaimer(body: string, category?: string) {
+  const needsDisclaimer = ['Taxes', 'Investing', 'Retirement', 'Real Estate'].includes(category || '')
+  if (!needsDisclaimer) return body
+  if (/not personal financial|general educational purposes|not financial advice/i.test(body)) return body
+  return `<p><em>This article is for general educational purposes and is not personal financial, investment, tax, or legal advice.</em></p>\n\n${body}`.trim()
 }
 
 function ensureFaq(body: string, keyword: string) {
@@ -109,26 +95,14 @@ function ensureFaq(body: string, keyword: string) {
   return `${body}
 
 <h2>FAQ</h2>
-<h3>Is ${topic} right for everyone?</h3>
-<p>No. The right choice depends on your goals, timeline, income, risk tolerance, and local rules.</p>
+<h3>What should I check first?</h3>
+<p>Start with the cost, timing, risk, and rules that could change the outcome.</p>
 
-<h3>What should I check before making a decision?</h3>
-<p>Review fees, taxes, deadlines, risks, alternatives, and whether the decision fits your wider financial plan.</p>
+<h3>Does the same answer work for everyone?</h3>
+<p>No. Income, debt, location, account rules, tax treatment, and timing can all change the right next step.</p>
 
-<h3>Should I get professional advice?</h3>
-<p>For tax, legal, investment, or complex financial decisions, consider speaking with a qualified professional.</p>`.trim()
-}
-
-function ensureInternalLinks(body: string) {
-  if (/href=["']\/blog/i.test(body) || /href=["']\/editorial-standards/i.test(body)) return body
-
-  return `${body}
-
-<h2>Related CashClimb Guides</h2>
-<ul>
-  <li><a href="/blog">Explore more personal finance guides</a></li>
-  <li><a href="/editorial-standards">Read our editorial standards</a></li>
-</ul>`.trim()
+<h3>When should I get help?</h3>
+<p>Consider qualified help when ${topic} affects taxes, investments, legal documents, property, retirement accounts, or large debts.</p>`.trim()
 }
 
 function ensureConclusion(body: string) {
@@ -137,37 +111,7 @@ function ensureConclusion(body: string) {
   return `${body}
 
 <h2>Bottom Line</h2>
-<p>The best next step is to compare your options clearly, avoid rushed decisions, and choose the path that fits your goals, timeline, and financial situation.</p>`.trim()
-}
-
-function expandBody(body: string, keyword: string) {
-  if (wordCount(body) >= 900) return body
-
-  const topic = titleCase(keyword || 'this decision')
-
-  return `${body}
-
-<h2>How to Think About ${topic}</h2>
-<p>A useful decision starts with your goal. Are you trying to reduce risk, save money, improve cash flow, avoid mistakes, or build a stronger long-term plan? Once the goal is clear, compare the practical tradeoffs instead of looking for one perfect answer.</p>
-
-<p>Most money decisions involve timing, fees, taxes, account rules, debt levels, income stability, and personal priorities. Looking at those details together makes the decision more practical and less stressful.</p>
-
-<h2>Common Mistakes to Avoid</h2>
-<ul>
-  <li>Making the decision based on one headline number.</li>
-  <li>Ignoring fees, taxes, deadlines, or account rules.</li>
-  <li>Following generic advice without checking your own situation.</li>
-  <li>Skipping a second review before making a high-stakes financial decision.</li>
-</ul>
-
-<h2>Simple Checklist</h2>
-<ul>
-  <li>Define your goal clearly.</li>
-  <li>List the costs, risks, and tradeoffs.</li>
-  <li>Compare at least two realistic options.</li>
-  <li>Check whether taxes, debt, or long-term plans are affected.</li>
-  <li>Pause before committing if the decision is complex or high stakes.</li>
-</ul>`.trim()
+<p>Focus on the next useful action: gather the numbers, compare the real costs, and avoid changes that create new risk.</p>`.trim()
 }
 
 async function fixBody(post: any) {
@@ -175,18 +119,16 @@ async function fixBody(post: any) {
   let body = clean(post.body)
 
   if (!body) {
-    body = `<p>This guide explains ${keyword} in plain English, with practical examples, common mistakes, and safe next steps.</p>`
+    body = `<p>This guide explains ${keyword} in plain English, with practical examples, common mistakes, and safer next steps.</p>`
   }
 
-  body = ensureDisclaimer(body)
-  body = ensureKeyTakeaways(body)
-  body = expandBody(body, keyword)
+  body = removeBadSections(body)
+  body = ensureDisclaimer(body, post.category)
   body = ensureFaq(body, keyword)
-  body = ensureInternalLinks(body)
   body = ensureConclusion(body)
   body = await cleanupExternalLinks(body, { validateExternal: true, removeInvalid: true })
 
-  return body
+  return body.replace(/\n{3,}/g, '\n\n').trim()
 }
 
 export async function POST(
