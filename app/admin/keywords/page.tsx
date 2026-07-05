@@ -4,18 +4,34 @@ import AutomationPanel from '@/components/admin/AutomationPanel'
 import KeywordRowActions from '@/components/admin/KeywordRowActions'
 import { createAdminClient } from '@/lib/supabase-server'
 
-const ACTIVE_STATUSES = ['queued', 'processing', 'failed', 'skipped']
-
 export default async function KeywordsPage() {
   const supabase = createAdminClient()
-  const [activeResult, completedResult] = await Promise.all([
+  const [queuedResult, queuedCountResult, processingResult, failedResult, completedResult] = await Promise.all([
     supabase
       .from('keyword_queue')
       .select('*')
-      .in('status', ACTIVE_STATUSES)
+      .eq('status', 'queued')
       .order('priority', { ascending: true })
       .order('created_at', { ascending: true })
       .limit(150),
+    supabase
+      .from('keyword_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'queued'),
+    supabase
+      .from('keyword_queue')
+      .select('*')
+      .eq('status', 'processing')
+      .order('updated_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(25),
+    supabase
+      .from('keyword_queue')
+      .select('*')
+      .in('status', ['failed', 'skipped'])
+      .order('updated_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(50),
     supabase
       .from('keyword_queue')
       .select('*')
@@ -25,8 +41,13 @@ export default async function KeywordsPage() {
       .limit(50),
   ])
 
-  const keywords = [...(activeResult.data ?? []), ...(completedResult.data ?? [])]
-  const queuedCount = (activeResult.data ?? []).filter((item: any) => item.status === 'queued').length
+  const keywords = [
+    ...(queuedResult.data ?? []),
+    ...(processingResult.data ?? []),
+    ...(failedResult.data ?? []),
+    ...(completedResult.data ?? []),
+  ]
+  const queuedCount = queuedCountResult.count ?? (queuedResult.data ?? []).length
 
   return (
     <div className="space-y-8">

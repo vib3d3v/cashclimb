@@ -98,7 +98,7 @@ async function getNextQueuedKeyword(keywordId?: string | null) {
       .from('keyword_queue')
       .select('*')
       .eq('id', keywordId)
-      .eq('status', 'queued')
+      .in('status', ['queued', 'failed'])
       .maybeSingle()
 
     if (error) throw error
@@ -125,10 +125,11 @@ async function lockKeyword(keyword: any) {
     .from('keyword_queue')
     .update({
       status: 'processing',
+      updated_at: new Date().toISOString(),
       notes: 'Draft generation started.',
     })
     .eq('id', keyword.id)
-    .eq('status', 'queued')
+    .eq('status', keyword.status)
     .select('*')
     .maybeSingle()
 
@@ -144,6 +145,7 @@ async function markKeywordCompleted(keywordId: string) {
     .update({
       status: 'completed',
       processed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       notes: 'Draft generated successfully.',
     })
     .eq('id', keywordId)
@@ -156,6 +158,7 @@ async function markKeywordFailed(keywordId: string, message: string) {
     .from('keyword_queue')
     .update({
       status: 'failed',
+      updated_at: new Date().toISOString(),
       notes: message || 'Draft generation failed.',
     })
     .eq('id', keywordId)

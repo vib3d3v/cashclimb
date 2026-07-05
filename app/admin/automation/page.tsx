@@ -13,6 +13,7 @@ export default async function AutomationPage() {
       .from('keyword_queue')
       .select('*')
       .eq('status', 'queued')
+      .order('priority', { ascending: true })
       .order('created_at', { ascending: true })
       .limit(12),
 
