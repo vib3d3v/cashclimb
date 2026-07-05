@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
+import { generateSerpApiKeywordIdeas } from '@/lib/automation/serpapi'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -192,7 +193,10 @@ export async function GET(req: NextRequest) {
 
     const supabase = createAdminClient()
     const signals = await getExistingKeywordSignals()
-    const parsed = await openaiTextJson(buildKeywordPrompt(signals, count))
+    const serpApiKeywords = await generateSerpApiKeywordIdeas({ howMany: Math.min(count * 3, 50), focus: 'Mixed' })
+    const parsed = serpApiKeywords.length > 0
+      ? { keywords: serpApiKeywords }
+      : await openaiTextJson(buildKeywordPrompt(signals, count))
 
     const keywords = Array.isArray(parsed.keywords) ? parsed.keywords : []
 
@@ -200,6 +204,7 @@ export async function GET(req: NextRequest) {
     const skipped: any[] = []
 
     for (const item of keywords) {
+      if (inserted.length >= count) break
       const keyword = String(item.keyword || '').trim()
       const category = String(item.category || '').trim()
       const intent = String(item.intent || 'beginner guide').trim()
@@ -241,7 +246,7 @@ export async function GET(req: NextRequest) {
           priority,
           status: 'queued',
           brief: item.brief ?? {},
-          notes: 'Auto-generated SEO keyword',
+          notes: item.brief?.source === 'serpapi' ? 'Auto-generated SEO keyword via SerpAPI' : 'Auto-generated SEO keyword',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -257,6 +262,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      source: serpApiKeywords.length > 0 ? 'serpapi' : 'openai',
       generated: keywords.length,
       inserted: inserted.length,
       skipped: skipped.length,
