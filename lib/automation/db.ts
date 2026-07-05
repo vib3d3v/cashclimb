@@ -109,6 +109,7 @@ async function getNextQueuedKeyword(keywordId?: string | null) {
     .from('keyword_queue')
     .select('*')
     .eq('status', 'queued')
+    .order('priority', { ascending: true })
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()

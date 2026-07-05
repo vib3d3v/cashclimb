@@ -11,7 +11,11 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
 
-  let query = supabase.from('keyword_queue').select('*').order('priority').order('created_at')
+  let query = supabase
+    .from('keyword_queue')
+    .select('*')
+    .order('priority', { ascending: true })
+    .order('created_at', { ascending: true })
   if (status) query = query.eq('status', status)
 
   const { data, error } = await query.limit(100)
