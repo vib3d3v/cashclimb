@@ -117,6 +117,12 @@ export function evaluateFinanceArticle(input: {
   const readerAwareLanguage = /\byou\b|\byour\b/i.test(plainText)
   const roboticPhrasing = /when it comes to|in today's world|navigating the|delve into|it is important to note that|in conclusion,? this article/i.test(plainText)
 
+  const incompleteEnding = /\b(?:a|an|and|as|at|by|for|from|in|into|of|on|or|the|to|vs|with|without|using|before|after|step[-\s]?by[-\s]?step)$/i
+  const brandedMeta = /\|\s*cash\s*climb|\|\s*cashclimb|cashclimb$/i
+  const cleanSeoTitle = cleanSeoText(input.seoTitle ?? input.title)
+  const cleanSeoDescription = cleanSeoText(input.seoDescription ?? input.excerpt)
+  const cleanExcerpt = cleanSeoText(input.excerpt)
+
   checks.push(
     buildCheck(
       'Title exists',
@@ -137,6 +143,15 @@ export function evaluateFinanceArticle(input: {
 
   checks.push(
     buildCheck(
+      'Title is complete',
+      !incompleteEnding.test(cleanTitle) && !brandedMeta.test(cleanTitle),
+      'Title must not end with a dangling word or include site branding.',
+      'error'
+    )
+  )
+
+  checks.push(
+    buildCheck(
       'No geo market noise',
       !hasGeoMarketNoise(`${input.title} ${input.excerpt} ${input.primaryKeyword || ''} ${input.seoTitle || ''} ${input.seoDescription || ''}`),
       'Remove market suffixes like US/UK/CA/AU from titles, slugs, keywords, excerpts, and metadata.',
@@ -147,8 +162,8 @@ export function evaluateFinanceArticle(input: {
   checks.push(
     buildCheck(
       'Excerpt exists',
-      input.excerpt.trim().length > 0,
-      'A concise excerpt helps with previews and trust.',
+      cleanExcerpt.length >= 90 && /[.!?]$/.test(cleanExcerpt),
+      'A concise excerpt helps with previews and trust, and it should end cleanly.',
       'warn'
     )
   )
@@ -156,8 +171,8 @@ export function evaluateFinanceArticle(input: {
   checks.push(
     buildCheck(
       'Meta title length looks healthy',
-      (input.seoTitle ?? input.title).trim().length >= 40 && (input.seoTitle ?? input.title).trim().length <= 65,
-      'Aim for 40 to 65 characters.',
+      cleanSeoTitle.length >= 35 && cleanSeoTitle.length <= 65 && !incompleteEnding.test(cleanSeoTitle) && !brandedMeta.test(cleanSeoTitle),
+      'Aim for 35 to 65 characters without site branding or dangling endings.',
       'warn'
     )
   )
@@ -165,9 +180,9 @@ export function evaluateFinanceArticle(input: {
   checks.push(
     buildCheck(
       'Meta description length looks healthy',
-      (input.seoDescription ?? input.excerpt).trim().length >= 120 &&
-        (input.seoDescription ?? input.excerpt).trim().length <= 160,
-      'Aim for 120 to 160 characters.',
+      cleanSeoDescription.length >= 120 &&
+        cleanSeoDescription.length <= 160 && /[.!?]$/.test(cleanSeoDescription),
+      'Aim for 120 to 160 characters and end on a complete sentence.',
       'warn'
     )
   )

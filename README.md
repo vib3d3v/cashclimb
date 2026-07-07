@@ -1,47 +1,39 @@
-# CashClimb Keyword Intelligence Engine
+# CashClimb Production Quality Engine
 
-This is the complete CashClimb keyword intelligence upgrade, not a small one-off patch.
+Apply the `cashclimb/` folder to the CashClimb repo root.
 
-## What it adds
+Then run the migrations in Supabase if they have not been run yet:
 
-- SerpAPI keyword intelligence instead of basic keyword fetching.
-- Collects candidates from Google Autocomplete, related searches, People Also Ask, and high-value finance fallback seeds.
-- Scores keywords by demand proxy, competition proxy, search intent, commercial value, topical authority value, coverage gap, and freshness.
-- Prioritizes high-value long-tail keywords that are more likely to help traffic and rankings.
-- Prevents duplicate intent and already-covered topics from being queued again.
-- Builds topic clusters and stores strategy metadata inside keyword briefs.
-- Keeps the AI editorial engine workflow.
-- Cleans `usukcaau`, `US/UK/CA/AU`, and similar geo noise from titles, slugs, keywords, excerpts, body, and metadata.
-- Keeps drafts as `ready_for_review` only after the editorial engine passes the quality threshold.
+1. `supabase/migrations/007_ai_editorial_engine.sql`
+2. `supabase/migrations/008_clean_geo_market_noise.sql`
+3. `supabase/migrations/009_keyword_intelligence_engine.sql`
+4. `supabase/migrations/010_production_quality_cleanup.sql`
 
-## Apply
-
-Copy the `cashclimb` folder contents into your CashClimb repo root.
-
-Then run this SQL in Supabase:
-
-```text
-supabase/migrations/009_keyword_intelligence_engine.sql
-```
-
-Then run:
+Then deploy:
 
 ```bash
 npm run build
 git add .
-git commit -m "Add keyword intelligence engine"
+git commit -m "Add production keyword and editorial quality engine"
 git push origin main
 ```
 
-## Test
+What this fixes:
 
-1. Go to `/admin/automation`.
-2. Click **Generate Keywords**.
-3. New queued keywords should be cleaner, higher-intent finance topics.
-4. Click **Draft Next**.
-5. Draft should target the highest-priority keyword first.
-6. Check the article title, slug, primary keyword, and excerpt. There should be no `usukcaau`.
+- No more `CashClimb` branding appended to SEO titles.
+- No more `usukcaau`, `US/UK/CA/AU`, or slug geo noise.
+- No truncated titles, SEO titles, excerpts, or meta descriptions.
+- Titles cannot end with dangling words like `for`, `with`, `to`, or `step-by-step`.
+- Slugs are generated from the cleaned final title, not the raw keyword.
+- Existing bad records are cleaned by migration `010`.
+- Manual cover image UI is removed from the admin form.
+- The editorial checker now flags incomplete titles and metadata instead of giving them 100.
+- The editorial engine normalizes title, slug, excerpt, SEO title, SEO description, keyword, related keywords, and body before rescoring.
 
-## Notes
+Validation performed:
 
-SerpAPI does not always return exact monthly search volume. This engine uses available SERP signals as a demand proxy, plus commercial finance heuristics and coverage-gap scoring. If you later connect a provider with exact keyword volume and KD, the scoring layer can accept those values without changing the rest of the pipeline.
+```bash
+npx tsc --noEmit
+```
+
+Passed locally after applying this patch to the uploaded CashClimb codebase. Full `next build` could not complete in this sandbox because Next tried to download the Linux SWC package and internet access is blocked here.

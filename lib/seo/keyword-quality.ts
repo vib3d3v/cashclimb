@@ -7,22 +7,33 @@ const GEO_NOISE_PATTERNS = [
 ]
 
 const STOP_WORDS = new Set([
-  'a','an','and','are','as','at','be','by','for','from','how','in','into','is','it','of','on','or','the','to','vs','what','when','why','with','without','your','you','guide','explained','beginner','beginners','checklist','step','steps','simple','best','top'
+  'a','an','and','are','as','at','be','by','for','from','how','in','into','is','it','of','on','or','the','to','vs','what','when','why','with','without','your','you','guide','explained','beginner','beginners','checklist','step','steps','simple','best','top','cashclimb'
 ])
+
+const DANGEROUS_ENDINGS = /\b(?:a|an|and|as|at|by|for|from|in|into|of|on|or|the|to|vs|with|without|step[-\s]?by[-\s]?step|using|before|after)$/i
+const BRANDING_PATTERN = /\s*[|:][-\s]*(?:cash\s*climb|cashclimb)\s*$/i
+
+function resetPatterns() {
+  for (const pattern of GEO_NOISE_PATTERNS) pattern.lastIndex = 0
+}
 
 export function cleanSeoText(value: any) {
   let text = String(value || '')
   for (const pattern of GEO_NOISE_PATTERNS) text = text.replace(pattern, ' ')
   return text
+    .replace(BRANDING_PATTERN, '')
+    .replace(/\bCashClimb\b/gi, '')
+    .replace(/\bstep[-\s]?by[-\s]?step\s+for\b/gi, 'for')
     .replace(/\s+([,.:;!?])/g, '$1')
     .replace(/\s{2,}/g, ' ')
     .replace(/\s+-\s+/g, ' - ')
-    .replace(/[-–—]\s*$/g, '')
-    .replace(/^[-–—]\s*/g, '')
+    .replace(/[-–—:|]\s*$/g, '')
+    .replace(/^[-–—:|]\s*/g, '')
     .trim()
 }
 
 export function hasGeoMarketNoise(value: any) {
+  resetPatterns()
   const text = String(value || '')
   return GEO_NOISE_PATTERNS.some((pattern) => {
     pattern.lastIndex = 0
@@ -34,6 +45,7 @@ export function cleanSlugText(value: any) {
   return slugify(cleanSeoText(value), { lower: true, strict: true })
     .replace(/(?:^|-)usukcaau(?:-|$)/g, '-')
     .replace(/(?:^|-)us-uk-ca-au(?:-|$)/g, '-')
+    .replace(/(?:^|-)cashclimb(?:-|$)/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
@@ -43,6 +55,7 @@ export function canonicalPrimaryKeyword(value: any) {
     .toLowerCase()
     .replace(/[’']/g, '')
     .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\bstep[-\s]?by[-\s]?step\s+for\b/gi, 'for')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -101,54 +114,179 @@ export function titleCaseKeyword(value: any) {
   return canonicalPrimaryKeyword(value)
     .split(' ')
     .filter(Boolean)
-    .map((word) => {
+    .map((word, index) => {
       const lower = word.toLowerCase()
-      if (['ira', '401k', 'etf', 'heloc', 'apr', 'apy', 'irs'].includes(lower)) return lower.toUpperCase()
-      if (['a','an','and','as','at','by','for','from','in','of','on','or','the','to','vs','with'].includes(lower)) return lower
+      if (['ira', '401k', 'etf', 'etfs', 'heloc', 'apr', 'apy', 'irs', 'hsa', 'cd'].includes(lower)) return lower.toUpperCase()
+      if (index > 0 && ['a','an','and','as','at','by','for','from','in','of','on','or','the','to','vs','with','without'].includes(lower)) return lower
+      if (lower === 'how') return 'How'
       return lower.charAt(0).toUpperCase() + lower.slice(1)
     })
     .join(' ')
-    .replace(/\bvs\b/i, 'vs')
+    .replace(/\bVs\b/g, 'vs')
+    .replace(/\bEtfs\b/g, 'ETFs')
+    .replace(/\bIra\b/g, 'IRA')
 }
 
-function trimToWord(value: string, max: number) {
-  const clean = cleanSeoText(value)
-  if (clean.length <= max) return clean
-  return clean.slice(0, max - 1).replace(/\s+\S*$/, '').trim()
+function removeDanglingEnding(value: string) {
+  let out = cleanSeoText(value)
+  while (DANGEROUS_ENDINGS.test(out)) {
+    out = out.replace(/\s+\S+$/g, '').trim()
+  }
+  return out
+}
+
+function firstValid(candidates: string[], min = 35, max = 72) {
+  for (const candidate of candidates) {
+    const clean = removeDanglingEnding(candidate)
+    if (!clean || hasGeoMarketNoise(clean) || BRANDING_PATTERN.test(clean)) continue
+    if (clean.length >= min && clean.length <= max && !DANGEROUS_ENDINGS.test(clean)) return clean
+  }
+  for (const candidate of candidates) {
+    const clean = removeDanglingEnding(candidate)
+    if (clean && !hasGeoMarketNoise(clean) && !BRANDING_PATTERN.test(clean) && !DANGEROUS_ENDINGS.test(clean)) return clean
+  }
+  return removeDanglingEnding(candidates[0] || 'Personal Finance Guide')
+}
+
+function specialTitle(keyword: string) {
+  const clean = canonicalPrimaryKeyword(keyword)
+  if (/bill pay/.test(clean) && /overdraft/.test(clean)) return 'How to Set Up Bill Pay Without Overdraft Fees'
+  if (/tax[-\s]?loss harvesting/.test(clean) && /taxable account/.test(clean)) return 'Tax-Loss Harvesting Guide for Taxable Accounts'
+  if (/co[-\s]?ownership agreement/.test(clean) && /home/.test(clean) && /friend/.test(clean)) return 'Co-Ownership Agreement Checklist for Buying a Home With Friends'
+  if (/currency conversion fee/.test(clean) && /(international etf|international stock)/.test(clean)) return 'How to Avoid Currency Conversion Fees on International Investments'
+  if (/unauthorized hard inquiry/.test(clean) && /credit report/.test(clean)) return 'How to Dispute an Unauthorized Hard Inquiry on Your Credit Report'
+  if (/international stock/.test(clean) && /currency risk/.test(clean)) return 'Beginner Checklist for Buying International Stocks With Currency Risk'
+  if (/freeze/.test(clean) && /credit/.test(clean)) return 'How to Freeze Your Credit Report Safely'
+  if (/credit utilization/.test(clean)) return 'Credit Utilization Explained for Beginners'
+  if (/high yield savings/.test(clean)) return 'High-Yield Savings Account Checklist for Beginners'
+  return null
+}
+
+function compactKeyword(keyword: string) {
+  return canonicalPrimaryKeyword(keyword)
+    .replace(/\b2026 guide\b/gi, '')
+    .replace(/\bbeginner'?s? guide\b/gi, '')
+    .replace(/\bbeginner checklist\b/gi, 'checklist')
+    .replace(/\bstep[-\s]?by[-\s]?step\b/gi, '')
+    .replace(/\bexplained\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export function buildSeoArticleTitle(keyword: any, intent?: string | null) {
-  const clean = canonicalPrimaryKeyword(keyword)
+  const clean = compactKeyword(keyword)
+  const special = specialTitle(clean)
+  if (special) return special
+
   const base = titleCaseKeyword(clean)
   const lowerIntent = String(intent || '').toLowerCase()
+  const candidates: string[] = []
 
-  let title = base
-  if (/\b(vs|versus|compare|comparison)\b/.test(clean) || lowerIntent === 'comparison') title = `${base}: What to Compare`
-  else if (/\bmistake|avoid|red flag|warning\b/.test(clean) || lowerIntent === 'mistakes') title = `${base}: Mistakes to Avoid`
-  else if (/\bchecklist\b/.test(clean) || lowerIntent === 'checklist') title = base.includes('Checklist') ? base : `${base} Checklist`
-  else if (/^how to\b/.test(clean) || lowerIntent === 'how-to') title = base
-  else if (/\bcalculator\b/.test(clean)) title = `${base}: What to Check`
-  else if (/\b(best|account|card|loan|mortgage|ira|401k|etf|tax|fees|rates)\b/.test(clean)) title = `${base}: Practical Guide`
-  else title = `${base}: Beginner Guide`
+  if (/^how to\b/.test(clean) || lowerIntent === 'how-to') {
+    candidates.push(base)
+  }
+  if (/\b(vs|versus|compare|comparison)\b/.test(clean) || lowerIntent === 'comparison') {
+    candidates.push(`${base}: What to Compare`)
+  }
+  if (/\bmistake|avoid|red flag|warning\b/.test(clean) || lowerIntent === 'mistakes') {
+    candidates.push(base.includes('Mistakes') ? base : `${base}: Mistakes to Avoid`)
+  }
+  if (/\bchecklist\b/.test(clean) || lowerIntent === 'checklist') {
+    candidates.push(base.includes('Checklist') ? base : `${base} Checklist`)
+  }
 
-  title = title
-    .replace(/^How To\b/, 'How to')
-    .replace(/\bFor\b/g, 'for')
-    .replace(/\bWith\b/g, 'with')
-    .replace(/\bAnd\b/g, 'and')
+  candidates.push(
+    base,
+    `${base}: Practical Guide`,
+    `${base}: What to Know`,
+    `${base}: Beginner Guide`,
+  )
 
-  return trimToWord(title, 70)
+  return firstValid(candidates, 35, 72)
 }
 
 export function buildSeoMetaTitle(keyword: any, intent?: string | null) {
-  return trimToWord(buildSeoArticleTitle(keyword, intent), 65)
+  const clean = compactKeyword(keyword)
+  const special = specialTitle(clean)
+  const candidates = [
+    special || '',
+    buildSeoArticleTitle(clean, intent),
+    `${titleCaseKeyword(clean)} Guide`,
+    `${titleCaseKeyword(clean)} Checklist`,
+  ].filter(Boolean)
+
+  return firstValid(candidates, 35, 65)
+}
+
+function sentence(value: string) {
+  const clean = removeDanglingEnding(value).replace(/\s+/g, ' ').trim()
+  if (!clean) return ''
+  return /[.!?]$/.test(clean) ? clean : `${clean}.`
 }
 
 export function buildSeoDescription(keyword: any, category?: string | null) {
   const topic = canonicalPrimaryKeyword(keyword)
   const readable = topic || 'this finance topic'
-  return trimToWord(
-    `Learn ${readable}: what to check, common mistakes, key risks, and practical next steps before making a money decision.`,
-    155
-  )
+  const candidates = [
+    `Learn ${readable}, including what to check, common mistakes to avoid, key risks, and practical next steps before you act.`,
+    `Use this ${category || 'finance'} guide to compare ${readable}, avoid common mistakes, and make a clearer money decision.`,
+    `A practical guide to ${readable}, with key checks, common mistakes, risks, examples, and safer next steps.`,
+  ]
+
+  for (const candidate of candidates) {
+    const clean = sentence(cleanSeoText(candidate))
+    if (clean.length >= 120 && clean.length <= 160) return clean
+  }
+
+  return sentence(cleanSeoText(candidates.find((candidate) => candidate.length <= 165) || candidates[candidates.length - 1]))
+}
+
+export function buildExcerpt(keyword: any, category?: string | null) {
+  const topic = canonicalPrimaryKeyword(keyword)
+  const readable = topic || 'this finance topic'
+  const candidates = [
+    `A practical guide to ${readable}, including what to check, common mistakes, examples, and safer next steps.`,
+    `Learn how ${readable} works, what to compare, and which mistakes to avoid before making a money decision.`,
+    `A clear ${category || 'finance'} guide to ${readable}, with examples, risks, and next steps.`,
+  ]
+
+  for (const candidate of candidates) {
+    const clean = sentence(cleanSeoText(candidate))
+    if (clean.length >= 100 && clean.length <= 155) return clean
+  }
+
+  return sentence(cleanSeoText(candidates[candidates.length - 1]))
+}
+
+export function normalizeGeneratedPostFields(input: {
+  title?: any
+  slug?: any
+  excerpt?: any
+  primaryKeyword?: any
+  relatedKeywords?: any
+  seoTitle?: any
+  seoDescription?: any
+  body?: any
+  category?: string | null
+  intent?: string | null
+}) {
+  const primaryKeyword = canonicalPrimaryKeyword(input.primaryKeyword || input.title || '')
+  const title = buildSeoArticleTitle(input.title || primaryKeyword, input.intent)
+  const seoTitle = buildSeoMetaTitle(input.seoTitle || title || primaryKeyword, input.intent)
+  const excerpt = buildExcerpt(input.excerpt || primaryKeyword, input.category)
+  const seoDescription = buildSeoDescription(input.seoDescription || primaryKeyword, input.category)
+  const slug = cleanSlugText(title)
+  const relatedKeywords = cleanKeywordList(input.relatedKeywords || primaryKeyword)
+  const body = cleanSeoText(input.body || '')
+
+  return {
+    title,
+    slug,
+    excerpt,
+    primaryKeyword,
+    relatedKeywords,
+    seoTitle,
+    seoDescription,
+    body,
+  }
 }

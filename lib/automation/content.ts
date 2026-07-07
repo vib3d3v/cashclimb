@@ -3,6 +3,7 @@ import type { Category } from '@/types'
 import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
 import {
   buildSeoArticleTitle,
+  buildExcerpt,
   buildSeoDescription,
   buildSeoMetaTitle,
   canonicalPrimaryKeyword,
@@ -206,12 +207,6 @@ function buildSeoTitle(keyword: string, intent?: string | null) {
   return buildSeoMetaTitle(keyword, intent)
 }
 
-function trim(text: any, max: number) {
-  const clean = safeString(text).replace(/\s+/g, ' ').trim()
-  if (clean.length <= max) return clean
-  return clean.slice(0, max - 1).trimEnd() + '…'
-}
-
 function paragraph(text: any) {
   return `<p>${safeString(text)}</p>`
 }
@@ -256,10 +251,10 @@ export function buildArticleDraft(input: DraftInput) {
   const topic = naturalTopic(keyword)
   const category = input.category
   const frame = categoryFrame(category)
-  const title = trim(buildTitle(keyword, input.intent), 70)
-  const seoTitle = trim(buildSeoTitle(keyword, input.intent), 65)
-  const excerpt = trim(`A practical guide to ${topic}, including what to check, common mistakes, examples, and safer next steps.`, 155)
-  const seoDescription = trim(buildSeoDescription(keyword), 155)
+  const title = buildTitle(keyword, input.intent)
+  const seoTitle = buildSeoTitle(keyword, input.intent)
+  const excerpt = buildExcerpt(keyword, category)
+  const seoDescription = buildSeoDescription(keyword, category)
   const author = resolvePostAuthorName({ title, category })
   const needsDisclaimer = ['Taxes', 'Investing', 'Retirement', 'Real Estate'].includes(category)
   const disclaimer = needsDisclaimer ? paragraph('<em>This article is for general educational purposes and is not personal financial, investment, tax, or legal advice.</em>') : ''
@@ -330,7 +325,7 @@ export function buildArticleDraft(input: DraftInput) {
 
   return {
     title: cleanSeoText(title),
-    slug: cleanSlugText(keyword),
+    slug: cleanSlugText(title),
     excerpt: cleanSeoText(excerpt),
     body: html,
     category,

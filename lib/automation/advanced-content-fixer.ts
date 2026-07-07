@@ -2,7 +2,6 @@ import slugify from 'slugify'
 import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
 import type { Category, WorkflowEvaluation } from '@/types'
-import { cleanSeoTitle } from '@/lib/seo/clean-title'
 import {
   buildSeoArticleTitle,
   buildSeoDescription,
@@ -12,6 +11,7 @@ import {
   cleanSeoText,
   cleanSlugText,
   keywordAppearsNaturally,
+  normalizeGeneratedPostFields,
   titleCaseKeyword,
 } from '@/lib/seo/keyword-quality'
 
@@ -272,13 +272,13 @@ function ensureMinimumDepth(html: string, keyword: string, category: Category) {
 
 function normalizeArticleTitle(value: string, keyword: string) {
   const clean = cleanSeoText(value).replace(/\s+/g, ' ').trim()
-  if (clean.length >= 35 && clean.length <= 70 && keywordAppearsNaturally(keyword, clean, '')) return clean
+  if (clean.length >= 35 && clean.length <= 72 && keywordAppearsNaturally(keyword, clean, '')) return buildSeoArticleTitle(clean)
   return buildSeoArticleTitle(keyword)
 }
 
 function buildSeoTitle(value: string, keyword: string) {
-  const clean = cleanSeoTitle(value || '')
-  if (clean.length >= 40 && clean.length <= 65 && keywordAppearsNaturally(keyword, clean, '')) return clean
+  const clean = cleanSeoText(value || '')
+  if (clean.length >= 35 && clean.length <= 65 && keywordAppearsNaturally(keyword, clean, '')) return buildSeoMetaTitle(clean)
   return buildSeoMetaTitle(keyword)
 }
 
@@ -376,12 +376,25 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   body = ensureConclusion(body)
   body = body.replace(/\n{3,}/g, '\n\n').trim()
 
-  const title = normalizeArticleTitle(post.title || `${titleCase(keyword)}: Step-by-Step Guide`, keyword)
-  const excerpt = cleanSeoText(post.excerpt || `Learn ${keyword} with practical examples, common mistakes, safer next steps, and a clear checklist for everyday financial decisions.`)
-  const seoTitle = buildSeoTitle(post.seo_title || title, keyword)
-  const seoDescription = trimSeoDescription(post.seo_description || buildSeoDescription(keyword) || excerpt, keyword)
-  const slug = cleanSlugText(keyword) || slugify(keyword, { lower: true, strict: true })
-  const relatedKeywords = cleanKeywordList(post.related_keywords || '')
+  const normalized = normalizeGeneratedPostFields({
+    title: post.title || keyword,
+    slug: post.slug || keyword,
+    excerpt: post.excerpt || keyword,
+    primaryKeyword: keyword,
+    relatedKeywords: post.related_keywords || '',
+    seoTitle: post.seo_title || post.title || keyword,
+    seoDescription: post.seo_description || post.excerpt || keyword,
+    body,
+    category,
+  })
+
+  const title = normalized.title
+  const excerpt = normalized.excerpt
+  const seoTitle = normalized.seoTitle
+  const seoDescription = normalized.seoDescription
+  const slug = normalized.slug || cleanSlugText(title) || slugify(title, { lower: true, strict: true })
+  const relatedKeywords = normalized.relatedKeywords
+  body = normalized.body
 
   const after = evaluateFinanceArticle({
     title,
