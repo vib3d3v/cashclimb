@@ -7,6 +7,7 @@ import {
   buildSeoDescription,
   buildSeoMetaTitle,
   canonicalPrimaryKeyword,
+  normalizeTargetKeyword,
   cleanKeywordList,
   cleanSeoText,
   cleanSlugText,
@@ -135,10 +136,24 @@ function ensureGeneralDisclaimer(html: string, category: Category) {
 }
 
 
+function naturalOpeningForKeyword(keyword: string) {
+  const clean = normalizeTargetKeyword(keyword)
+  if (/bill pay/.test(clean) && /overdraft/.test(clean)) {
+    return 'Automatic bill pay can prevent missed due dates, but only when payment dates match your cash flow and balance alerts give you time to react.'
+  }
+  if (/tax[-\s]?loss harvesting/.test(clean)) {
+    return 'Tax-loss harvesting can reduce taxable gains, but the timing, replacement investment, and wash-sale rule need to be checked carefully.'
+  }
+  if (/co[-\s]?ownership agreement/.test(clean)) {
+    return 'Buying a home with friends works best when the ownership agreement clearly explains costs, decisions, repairs, and exit plans before money changes hands.'
+  }
+  return `This guide explains the decision in practical terms, including what to compare, what can go wrong, and which details to verify before acting.`
+}
+
 function ensureKeywordInOpening(html: string, keyword: string) {
   if (keywordAppearsNaturally(keyword, '', stripHtml(html).slice(0, 1200))) return html
 
-  const opening = p(`This guide explains ${keyword} in practical terms, including what to compare, what can go wrong, and which details to verify before acting.`)
+  const opening = p(naturalOpeningForKeyword(keyword))
 
   const disclaimerMatch = html.match(/^(\s*<p>[^<]*(?:general educational purposes|not personal financial|not financial advice)[\s\S]*?<\/p>\s*)/i)
   if (disclaimerMatch?.[0]) {
@@ -350,7 +365,7 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   if (!post) throw new Error('Post not found.')
 
   const category = categoryFromPost(post)
-  const keyword = canonicalPrimaryKeyword(primaryKeyword(post))
+  const keyword = normalizeTargetKeyword(primaryKeyword(post))
 
   const before = evaluateFinanceArticle({
     title: post.title || '',

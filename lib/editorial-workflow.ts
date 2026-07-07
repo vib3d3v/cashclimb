@@ -5,6 +5,7 @@ import {
   keywordLooksSeoWorthy,
   cleanSeoText,
   canonicalPrimaryKeyword,
+  significantKeywordTerms,
   hasGeoMarketNoise,
 } from '@/lib/seo/keyword-quality'
 
@@ -83,6 +84,21 @@ function hasSentenceVariety(lengths: number[]) {
   const min = Math.min(...lengths)
   const max = Math.max(...lengths)
   return min <= 10 && max >= 18
+}
+
+function exactPhraseCount(text: string, phrase: string) {
+  const cleanPhrase = canonicalPrimaryKeyword(phrase)
+  if (!cleanPhrase || cleanPhrase.split(/\s+/).length < 4) return 0
+  const cleanText = canonicalPrimaryKeyword(text)
+  return cleanText.split(cleanPhrase).length - 1
+}
+
+function hasNaturalEntityCoverage(text: string, keyword: string) {
+  const terms = significantKeywordTerms(keyword)
+  if (terms.length < 2) return true
+  const lower = canonicalPrimaryKeyword(text)
+  const covered = terms.filter((term) => lower.includes(term)).length
+  return covered / terms.length >= 0.55
 }
 
 export function evaluateFinanceArticle(input: {
@@ -281,7 +297,9 @@ export function evaluateFinanceArticle(input: {
   if (input.primaryKeyword) {
     const keyword = input.primaryKeyword.toLowerCase()
     const titleAndOpening = `${input.title} ${plainText.slice(0, 1200)}`
-    const titleCoverage = keywordCoverage(keyword, input.title)
+    const titleCoverage = keywordCoverage(input.title, keyword)
+    const fullTextWithMeta = `${input.title} ${input.excerpt} ${input.seoTitle || ''} ${input.seoDescription || ''} ${plainText}`
+    const repeatedExactPhrase = exactPhraseCount(fullTextWithMeta, keyword)
 
     checks.push(
       buildCheck(
@@ -295,7 +313,7 @@ export function evaluateFinanceArticle(input: {
     checks.push(
       buildCheck(
         'Title matches search intent',
-        titleCoverage >= 0.55 || keywordCoverage(keyword, titleAndOpening) >= 0.7,
+        titleCoverage >= 0.55 || keywordCoverage(titleAndOpening, keyword) >= 0.7,
         'The title should contain the main searchable terms without forcing the exact phrase.',
         'warn'
       )
@@ -304,8 +322,17 @@ export function evaluateFinanceArticle(input: {
     checks.push(
       buildCheck(
         'Keyword appears naturally',
-        keywordAppearsNaturally(keyword, input.title, plainText),
+        keywordAppearsNaturally(keyword, input.title, plainText) || hasNaturalEntityCoverage(plainText, keyword),
         'Primary keyword terms should appear naturally in the title or opening section.',
+        'warn'
+      )
+    )
+
+    checks.push(
+      buildCheck(
+        'Avoids exact keyword repetition',
+        repeatedExactPhrase <= 2,
+        'Use semantic variations instead of repeating the full keyword phrase across sections.',
         'warn'
       )
     )

@@ -7,6 +7,7 @@ import {
   buildSeoDescription,
   buildSeoMetaTitle,
   canonicalPrimaryKeyword,
+  normalizeTargetKeyword,
   cleanKeywordList,
   cleanSeoText,
   cleanSlugText,
@@ -106,7 +107,7 @@ const OFFICIAL_LINKS: Record<Category, { title: string; href: string }[]> = {
 }
 
 function cleanKeyword(value: any) {
-  return canonicalPrimaryKeyword(value)
+  return normalizeTargetKeyword(value)
 }
 
 function sentenceCase(value: any) {
@@ -246,9 +247,60 @@ function faqFor(category: Category): Array<[string, string]> {
   return map[category]
 }
 
+function humanTopicPhrase(keyword: string) {
+  const clean = normalizeTargetKeyword(keyword)
+  if (/bill pay/.test(clean) && /overdraft/.test(clean)) return 'automatic bill pay'
+  if (/tax[-\s]?loss harvesting/.test(clean)) return 'tax-loss harvesting'
+  if (/co[-\s]?ownership agreement/.test(clean)) return 'a co-ownership agreement'
+  if (/hard inquiry/.test(clean)) return 'an unauthorized hard inquiry'
+  if (/currency conversion fee/.test(clean)) return 'currency conversion fees'
+  return clean || 'this money decision'
+}
+
+function articleIntro(keyword: string, category: Category, frame: CategoryFrame) {
+  const topic = humanTopicPhrase(keyword)
+  if (/bill pay/.test(keyword) && /overdraft/.test(keyword)) {
+    return paragraph('Automatic bill pay can prevent missed due dates, but it can also trigger overdraft fees if payment dates and account balances are not planned together. The goal is to match recurring payments with your cash flow, keep a small buffer, and use alerts before bills pull money from your account.')
+  }
+  if (/tax[-\s]?loss harvesting/.test(keyword)) {
+    return paragraph('Tax-loss harvesting can help offset taxable gains, but it only works when the trade, replacement investment, and timing are handled carefully. The key is to understand the wash-sale rule, account type, and whether the tax benefit is worth the extra complexity.')
+  }
+  if (/co[-\s]?ownership agreement/.test(keyword)) {
+    return paragraph('Buying a home with friends can make ownership feel more affordable, but the agreement matters as much as the mortgage. A written plan should explain who pays what, how decisions are made, and what happens if one person wants to leave.')
+  }
+  return paragraph(`${sentenceCase(topic)} can affect ${frame.focus}. A useful decision starts with the numbers, the timing, and the risks that could make a good idea harder to maintain.`)
+}
+
+function quickAnswer(keyword: string, category: Category, frame: CategoryFrame) {
+  const topic = humanTopicPhrase(keyword)
+  if (/bill pay/.test(keyword) && /overdraft/.test(keyword)) {
+    return paragraph('Automatic bill pay works best when fixed bills are scheduled after reliable income arrives, variable bills are reviewed manually, and account alerts warn you before your balance gets too low.')
+  }
+  if (/tax[-\s]?loss harvesting/.test(keyword)) {
+    return paragraph('The basic idea is to sell an investment at a loss, use that loss to offset eligible gains, and avoid buying a substantially identical replacement too soon.')
+  }
+  if (/co[-\s]?ownership agreement/.test(keyword)) {
+    return paragraph('A good agreement should cover ownership share, monthly costs, repairs, exit terms, dispute handling, and what happens if someone cannot pay.')
+  }
+  return paragraph(`The practical answer depends on ${frame.check}. Compare the cost, timing, flexibility, and downside before making the next move.`)
+}
+
+function whyThisMatters(keyword: string, frame: CategoryFrame) {
+  if (/bill pay/.test(keyword) && /overdraft/.test(keyword)) {
+    return [
+      paragraph('Overdraft fees often happen because bills leave the account before income arrives, not because the bill itself is unexpected.'),
+      paragraph('A better setup uses due dates, bank alerts, and a small buffer so automatic payments support your budget instead of surprising it.'),
+    ]
+  }
+  return [
+    paragraph(`The main risk is ${frame.risk}. A decision can look helpful at first but become expensive if fees, deadlines, taxes, or account rules are ignored.`),
+    paragraph('The better approach is to compare the realistic options and choose the smallest useful next step before making a larger commitment.'),
+  ]
+}
+
 export function buildArticleDraft(input: DraftInput) {
   const keyword = cleanKeyword(input.keyword)
-  const topic = naturalTopic(keyword)
+  const topic = humanTopicPhrase(keyword)
   const category = input.category
   const frame = categoryFrame(category)
   const title = buildTitle(keyword, input.intent)
@@ -262,9 +314,9 @@ export function buildArticleDraft(input: DraftInput) {
 
   let html = [
     disclaimer,
-    paragraph(`${sentenceCase(topic)} matters because small details can change the real cost or risk. This guide focuses on ${frame.focus}, so you can compare the choice without turning it into a generic money rule.`),
+    articleIntro(keyword, category, frame),
     '<h2>Quick Answer</h2>',
-    paragraph(`${sentenceCase(topic)} is a financial decision that should be checked against your income, timeline, fees, taxes, risk tolerance, and ability to reverse the choice if conditions change.`),
+    quickAnswer(keyword, category, frame),
     '<h2>Key Takeaways</h2>',
     list([
       `Start by checking ${frame.check}.`,
@@ -272,8 +324,7 @@ export function buildArticleDraft(input: DraftInput) {
       'Use current official guidance when rules, rates, taxes, or account limits may have changed.',
     ]),
     '<h2>Why this matters</h2>',
-    paragraph(`A weak article about ${topic} gives broad advice. A useful one explains what changes the outcome: costs, timing, rules, risk, and how easy the decision is to reverse.`),
-    paragraph(`For readers, the practical question is not whether there is one perfect answer. It is which option fits the numbers in front of them without creating a bigger problem later.`),
+    ...whyThisMatters(keyword, frame),
     '<h2>How it works</h2>',
     list([
       'Define the exact decision in one sentence.',
@@ -292,7 +343,7 @@ export function buildArticleDraft(input: DraftInput) {
     '<h2>Risk and Tradeoffs</h2>',
     paragraph(`The main tradeoff is ${frame.risk}. A decision can look helpful in the short term but still be expensive if it adds fees, reduces flexibility, or depends on an outcome that is not guaranteed.`),
     '<h2>Real Examples</h2>',
-    paragraph(`For example, two choices around ${topic} may look similar at first. One may have a lower monthly cost, while the other may be safer because it keeps more cash available or avoids a fee later.`),
+    paragraph(`For example, two options may look similar at first. One may have a lower monthly cost, while the other may be safer because it keeps more cash available or avoids a fee later.`),
     paragraph('That is why the answer depends on the details. A small fee, a deadline, or a rule about access can matter more than the headline benefit.'),
     '<h2>Common Mistakes to Avoid</h2>',
     list([
@@ -307,7 +358,7 @@ export function buildArticleDraft(input: DraftInput) {
     '<h2>FAQ</h2>',
     ...faqs.flatMap(([q, a]) => [`<h3>${q}</h3>`, paragraph(a)]),
     '<h2>What You Can Do Next</h2>',
-    paragraph(`Treat ${topic} as a specific finance decision, not a slogan. Gather the numbers, compare the tradeoffs, verify current rules, and take the smallest useful next step.`),
+    paragraph(`Treat the topic as a specific finance decision, not a slogan. Gather the numbers, compare the tradeoffs, verify current rules, and take the smallest useful next step.`),
   ].filter(Boolean).join('\n')
 
   html = cleanSeoText(html)
@@ -331,7 +382,7 @@ export function buildArticleDraft(input: DraftInput) {
     category,
     author,
     read_time: readTime,
-    primary_keyword: keyword,
+    primary_keyword: normalizeTargetKeyword(keyword),
     related_keywords: cleanKeywordList(relatedKeywords(keyword, category)),
     seo_title: cleanSeoText(seoTitle),
     seo_description: cleanSeoText(seoDescription),

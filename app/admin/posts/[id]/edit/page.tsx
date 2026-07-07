@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
-import slugify from 'slugify'
 import readingTime from 'reading-time'
 import PostForm from '@/components/admin/PostForm'
 import PostSaveToast from '@/components/admin/PostSaveToast'
@@ -8,6 +7,7 @@ import SEOChecklistCard from '@/components/admin/SEOChecklistCard'
 import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle } from '@/lib/editorial-workflow'
 import { cleanupExternalLinks } from '@/lib/normalize-links'
+import { cleanKeywordList, cleanSeoText, cleanSlugText, normalizeTargetKeyword } from '@/lib/seo/keyword-quality'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,46 +45,41 @@ export default async function EditPostPage({ params }: { params: { id: string } 
         category: post.category || 'Personal Finance',
         seoTitle: post.seo_title || '',
         seoDescription: post.seo_description || '',
-        coverUrl: post.cover_url || '',
+        coverUrl: null,
       })
 
   async function updatePost(formData: FormData) {
     'use server'
 
     const supabase = createAdminClient()
-
-    const title = String(formData.get('title') || '').trim()
-    const body = await cleanupExternalLinks(String(formData.get('body') || '').trim(), {
+    const title = cleanSeoText(formData.get('title') || '')
+    const body = await cleanupExternalLinks(cleanSeoText(formData.get('body') || ''), {
       validateExternal: true,
       removeInvalid: true,
     })
     const category = String(formData.get('category') || 'Personal Finance')
     const status = String(formData.get('status') || 'draft')
-
-    const related = String(formData.get('related_keywords') || '')
-      .split(',')
-      .map((x) => x.trim())
-      .filter(Boolean)
+    const related = cleanKeywordList(String(formData.get('related_keywords') || ''))
+    const primaryKeyword = normalizeTargetKeyword(formData.get('primary_keyword') || title)
+    const seoTitle = cleanSeoText(formData.get('seo_title') || title)
+    const seoDescription = cleanSeoText(formData.get('seo_description') || formData.get('excerpt') || '')
 
     const payload = {
       title,
-      slug: slugify(String(formData.get('slug') || title), {
-        lower: true,
-        strict: true,
-      }),
-      excerpt: String(formData.get('excerpt') || '').trim(),
+      slug: cleanSlugText(formData.get('slug') || title),
+      excerpt: cleanSeoText(formData.get('excerpt') || ''),
       body,
       category,
-      author: String(formData.get('author') || 'CashClimb Editorial').trim(),
-      cover_url: String(formData.get('cover_url') || '').trim() || null,
+      author: cleanSeoText(formData.get('author') || 'CashClimb Editorial'),
+      cover_url: null,
       published: status === 'published',
       status,
       published_at: status === 'published' ? new Date().toISOString() : null,
       read_time: readingTime(body.replace(/<[^>]*>/g, ' ')).text,
-      primary_keyword: String(formData.get('primary_keyword') || '').trim() || null,
+      primary_keyword: primaryKeyword || null,
       related_keywords: related,
-      seo_title: String(formData.get('seo_title') || '').trim() || null,
-      seo_description: String(formData.get('seo_description') || '').trim() || null,
+      seo_title: seoTitle || null,
+      seo_description: seoDescription || null,
     }
 
     const { error } = await supabase
@@ -104,12 +99,8 @@ export default async function EditPostPage({ params }: { params: { id: string } 
       </Suspense>
 
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-gold">
-          Admin
-        </p>
-        <h1 className="mt-2 font-serif text-4xl font-black text-[#F0EDE8]">
-          Edit post
-        </h1>
+        <p className="text-xs font-bold uppercase tracking-widest text-gold">Admin</p>
+        <h1 className="mt-2 font-serif text-4xl font-black text-[#F0EDE8]">Edit post</h1>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
