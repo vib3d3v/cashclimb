@@ -45,8 +45,11 @@ export interface AnalyticsSummary {
 
 export type WorkflowStatus =
   | 'draft'
+  | 'improving'
   | 'review_required'
+  | 'ready_for_review'
   | 'approved'
+  | 'scheduled'
   | 'published'
   | 'rejected'
 

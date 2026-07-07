@@ -2,7 +2,7 @@ import type { Category } from '@/types'
 import CoverImageField from './CoverImageField'
 
 const categories: Category[] = ['Personal Finance', 'Credit', 'Investing', 'Retirement', 'Taxes', 'Real Estate']
-const statuses = ['draft', 'review_required', 'approved', 'published', 'rejected']
+const statuses = ['draft', 'improving', 'review_required', 'ready_for_review', 'approved', 'scheduled', 'published', 'rejected']
 
 type Props = {
   post?: any

@@ -4,6 +4,7 @@ import SEOFixButton from '@/components/admin/SEOFixButton'
 import AdvancedContentFixButton from '@/components/admin/AdvancedContentFixButton'
 import HumanizeButton from '@/components/admin/HumanizeButton'
 import RefreshArticleButton from '@/components/admin/RefreshArticleButton'
+import AIEditorialEngineButton from '@/components/admin/AIEditorialEngineButton'
 
 function toneFor(score: number) {
   if (score >= 85) return 'text-emerald-300 border-emerald-400/20 bg-emerald-400/10'
@@ -38,7 +39,8 @@ export default function SEOChecklistCard({
       </div>
 
       <div className="mt-5 space-y-3">
-        <SEORecheckButton postId={postId} />
+        <AIEditorialEngineButton postId={postId} />
+          <SEORecheckButton postId={postId} />
         <SEOFixButton postId={postId} />
         <AdvancedContentFixButton postId={postId} />
         <HumanizeButton postId={postId} />

@@ -1,9 +1,14 @@
 import type { WorkflowCheck, WorkflowEvaluation, WorkflowStatus } from '@/types'
 
+export const AUTOMATION_QUALITY_THRESHOLD = 95
+
 export const WORKFLOW_STATUSES: WorkflowStatus[] = [
   'draft',
+  'improving',
   'review_required',
+  'ready_for_review',
   'approved',
+  'scheduled',
   'published',
   'rejected',
 ]
@@ -284,9 +289,20 @@ export function evaluateFinanceArticle(input: {
   }
 }
 
-export function nextStatusFromEvaluation(evaluation: WorkflowEvaluation): WorkflowStatus {
-  if (!evaluation.passed || evaluation.risk_level !== 'low') {
+export function nextStatusFromEvaluation(
+  evaluation: WorkflowEvaluation,
+  threshold = AUTOMATION_QUALITY_THRESHOLD
+): WorkflowStatus {
+  if (!evaluation.passed || evaluation.risk_level !== 'low' || evaluation.score < threshold) {
     return 'review_required'
   }
-  return 'approved'
+
+  return 'ready_for_review'
+}
+
+export function isReadyForHumanReview(
+  evaluation: WorkflowEvaluation,
+  threshold = AUTOMATION_QUALITY_THRESHOLD
+) {
+  return evaluation.passed && evaluation.risk_level === 'low' && evaluation.score >= threshold
 }

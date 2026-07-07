@@ -7,9 +7,12 @@ import { authedFetch } from './authedFetch'
 
 type WorkflowStatus =
   | 'draft'
-  | 'approved'
-  | 'published'
+  | 'improving'
   | 'review_required'
+  | 'ready_for_review'
+  | 'approved'
+  | 'scheduled'
+  | 'published'
   | 'rejected';
 
 export default function EditorialActionButtons({
@@ -27,7 +30,7 @@ export default function EditorialActionButtons({
   const [busyAction, setBusyAction] = useState<string | null>(null)
 
   const canRunChecks = status !== 'published'
-  const canApprove = !published && status !== 'approved' && status !== 'published'
+  const canApprove = !published && ['ready_for_review', 'review_required', 'draft'].includes(String(status || 'draft'))
   const canPublish = !published && status === 'approved'
 
   const buttonClass = useMemo(
@@ -129,7 +132,7 @@ export default function EditorialActionButtons({
           disabled={busyAction !== null}
           className={`${buttonClass} bg-sky-400/10 text-sky-300 hover:bg-sky-400/20`}
         >
-          {busyAction === 'approve' ? 'Approving…' : 'Approve'}
+          {busyAction === 'approve' ? 'Approving…' : status === 'ready_for_review' ? 'Approve for publishing' : 'Approve anyway'}
         </button>
       )}
 
