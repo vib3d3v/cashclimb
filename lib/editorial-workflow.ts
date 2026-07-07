@@ -5,6 +5,7 @@ import {
   keywordLooksSeoWorthy,
   cleanSeoText,
   canonicalPrimaryKeyword,
+  hasGeoMarketNoise,
 } from '@/lib/seo/keyword-quality'
 
 export const AUTOMATION_QUALITY_THRESHOLD = 95
@@ -130,6 +131,15 @@ export function evaluateFinanceArticle(input: {
       'Title length looks healthy',
       cleanTitle.trim().length >= 35 && cleanTitle.trim().length <= 70,
       'Aim for 35 to 70 characters.',
+      'warn'
+    )
+  )
+
+  checks.push(
+    buildCheck(
+      'No geo market noise',
+      !hasGeoMarketNoise(`${input.title} ${input.excerpt} ${input.primaryKeyword || ''} ${input.seoTitle || ''} ${input.seoDescription || ''}`),
+      'Remove market suffixes like US/UK/CA/AU from titles, slugs, keywords, excerpts, and metadata.',
       'warn'
     )
   )

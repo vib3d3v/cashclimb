@@ -9,6 +9,7 @@ import {
   canonicalPrimaryKeyword,
   cleanKeywordList,
   cleanSeoText,
+  cleanSlugText,
   significantKeywordTerms,
   titleCaseKeyword,
 } from '@/lib/seo/keyword-quality'

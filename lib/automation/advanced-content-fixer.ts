@@ -10,6 +10,7 @@ import {
   canonicalPrimaryKeyword,
   cleanKeywordList,
   cleanSeoText,
+  cleanSlugText,
   keywordAppearsNaturally,
   titleCaseKeyword,
 } from '@/lib/seo/keyword-quality'
@@ -349,7 +350,7 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   if (!post) throw new Error('Post not found.')
 
   const category = categoryFromPost(post)
-  const keyword = primaryKeyword(post)
+  const keyword = canonicalPrimaryKeyword(primaryKeyword(post))
 
   const before = evaluateFinanceArticle({
     title: post.title || '',
@@ -379,7 +380,7 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   const excerpt = cleanSeoText(post.excerpt || `Learn ${keyword} with practical examples, common mistakes, safer next steps, and a clear checklist for everyday financial decisions.`)
   const seoTitle = buildSeoTitle(post.seo_title || title, keyword)
   const seoDescription = trimSeoDescription(post.seo_description || buildSeoDescription(keyword) || excerpt, keyword)
-  const slug = slugify(keyword, { lower: true, strict: true })
+  const slug = cleanSlugText(keyword) || slugify(keyword, { lower: true, strict: true })
   const relatedKeywords = cleanKeywordList(post.related_keywords || '')
 
   const after = evaluateFinanceArticle({
@@ -399,7 +400,7 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
 
   const updatedPost = await safeUpdatePost(postId, {
     title,
-    slug: post.published ? post.slug : slug,
+    slug: post.published ? cleanSlugText(post.slug || slug) : slug,
     excerpt,
     body,
     primary_keyword: keyword,

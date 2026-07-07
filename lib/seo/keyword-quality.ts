@@ -19,11 +19,17 @@ const LOW_VALUE_PATTERNS = [
 
 const INTENT_WORDS = /\b(how to|checklist|mistakes?|avoid|vs|compare|comparison|explained|calculator|template|examples?|guide|what is|when to|costs?|fees?|rules?)\b/i
 
+const GEO_MARKET_NOISE = /(?:\((?:\s*(?:us|u\.s\.|usa|uk|u\.k\.|ca|canada|au|australia)\s*[\/|,\-]?\s*){2,}\)|\b(?:us\s*\/\s*uk\s*\/\s*ca\s*\/\s*au|u\.s\.\s*\/\s*u\.k\.\s*\/\s*ca\s*\/\s*au|us\s+uk\s+ca\s+au|us-uk-ca-au|usukcaau|us\s*uk\s*ca\s*au|usa\s*\/\s*uk\s*\/\s*canada\s*\/\s*australia|usa\s+uk\s+canada\s+australia)\b)/gi
+
+export function hasGeoMarketNoise(value: any = '') {
+  GEO_MARKET_NOISE.lastIndex = 0
+  return GEO_MARKET_NOISE.test(String(value || ''))
+}
+
 export function removeGeoMarketNoise(value: any = '') {
   return String(value || '')
-    .replace(/\((?:\s*(?:us|u\.s\.|usa|uk|u\.k\.|ca|canada|au|australia)\s*[\/|,\-]?\s*){2,}\)/gi, ' ')
-    .replace(/\b(?:us\s*\/\s*uk\s*\/\s*ca\s*\/\s*au|u\.s\.\s*\/\s*u\.k\.\s*\/\s*ca\s*\/\s*au|us\s+uk\s+ca\s+au|us-uk-ca-au|usukcaau|us\s*uk\s*ca\s*au)\b/gi, ' ')
-    .replace(/\b(?:usa\s*\/\s*uk\s*\/\s*canada\s*\/\s*australia|usa\s+uk\s+canada\s+australia)\b/gi, ' ')
+    .replace(GEO_MARKET_NOISE, ' ')
+    .replace(/[-_\s]*(?:usukcaau|us-uk-ca-au|us_uk_ca_au)(?=$|[-_\s,.;:!?)])/gi, ' ')
     .replace(/\b(?:for|in|across)\s*$/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -37,6 +43,15 @@ export function cleanSeoText(value: any = '') {
     .replace(/^[-\s:;,.]+/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+export function cleanSlugText(value: any = '') {
+  return cleanSeoText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(?:^|-)(?:usukcaau|us-uk-ca-au|us-uk-ca|us-uk)(?=-|$)/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
 }
 
 export function cleanKeywordList(value: any = '') {
