@@ -198,14 +198,6 @@ export function evaluateFinanceArticle(input: {
     )
   )
 
-  checks.push(
-    buildCheck(
-      'Has featured image',
-      Boolean(input.coverUrl?.trim()),
-      'Add a featured image.',
-      'warn'
-    )
-  )
 
   checks.push(
     buildCheck(

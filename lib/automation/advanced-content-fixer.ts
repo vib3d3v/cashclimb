@@ -193,6 +193,88 @@ function buildUsefulDepthSections(html: string, keyword: string, category: Categ
   return out
 }
 
+
+function ensureKeyTakeaways(html: string, keyword: string, category: Category) {
+  if (/<h2[^>]*>\s*key takeaways\s*<\/h2>[\s\S]*?<ul>[\s\S]*?<\/ul>/i.test(html)) return html
+
+  const items = [
+    `${titleCase(keyword)} should be checked against your actual costs, deadlines, account rules, and downside risk.`,
+    `Start with the numbers you can verify today instead of relying on a generic rule.`,
+    `For ${category.toLowerCase()} decisions, compare at least one safer alternative before taking a large or irreversible step.`,
+    'Keep notes, screenshots, statements, or documents so you can review the decision later.',
+  ]
+
+  const section = `<h2>Key Takeaways</h2>\n${list(items)}`
+  const firstH2 = html.search(/<h2\b/i)
+  if (firstH2 === -1) return `${section}\n${html}`
+  return `${html.slice(0, firstH2)}${section}\n${html.slice(firstH2)}`
+}
+
+function ensureInternalLink(html: string, category: Category) {
+  if (/href="\/blog(?:\/|\?|"|#)/i.test(html)) return html
+
+  const anchor = category === 'Credit'
+    ? 'more credit guides'
+    : category === 'Investing'
+      ? 'more investing guides'
+      : category === 'Taxes'
+        ? 'more tax guides'
+        : category === 'Retirement'
+          ? 'more retirement guides'
+          : category === 'Real Estate'
+            ? 'more real estate guides'
+            : 'more personal finance guides'
+
+  return appendSection(
+    html,
+    'Related CashClimb guides',
+    rawP(`You can also browse <a href="/blog" rel="internal">${anchor}</a> to compare this topic with other money decisions.`)
+  )
+}
+
+function ensureMinimumDepth(html: string, keyword: string, category: Category) {
+  let out = html
+  let guard = 0
+  while (wordCount(out) < 950 && guard < 3) {
+    guard += 1
+    out = appendSection(out, guard === 1 ? 'Additional Checks Before You Act' : `Additional Checks Before You Act ${guard}`, [
+      p(`Before acting on ${keyword}, write down the exact action, the amount involved, the deadline, and the consequence if the decision goes wrong. This keeps the advice practical and helps you avoid treating a general article like personalized guidance.`),
+      p(`For a ${category.toLowerCase()} topic, the safer approach is usually to compare fees, eligibility rules, timing, taxes, flexibility, and the worst-case outcome. If any of those details are unclear, pause and verify them with the official provider or a qualified professional.`),
+    ].join('\n'))
+  }
+  return out
+}
+
+function normalizeArticleTitle(value: string, keyword: string) {
+  const clean = String(value || '').replace(/\s+/g, ' ').trim()
+  if (clean.length >= 35 && clean.length <= 70) return clean
+
+  const base = titleCase(keyword)
+  const candidates = [
+    `${base}: Practical Steps and Mistakes to Avoid`,
+    `${base}: Simple Checklist and Next Steps`,
+    `${base}: What to Check First`,
+  ]
+
+  return candidates.find((candidate) => candidate.length >= 35 && candidate.length <= 70)
+    || base.slice(0, 70)
+}
+
+function buildSeoTitle(value: string, keyword: string) {
+  const clean = cleanSeoTitle(value || '')
+  if (clean.length >= 40 && clean.length <= 65) return clean
+
+  const base = titleCase(keyword)
+  const candidates = [
+    `${base}: Checklist and Common Mistakes`,
+    `${base}: Practical CashClimb Guide`,
+    `${base}: What to Check First`,
+  ]
+
+  return candidates.find((candidate) => candidate.length >= 40 && candidate.length <= 65)
+    || `${base} Guide`.slice(0, 65)
+}
+
 function ensureConclusion(html: string) {
   if (/next steps|the bottom line|final thoughts/i.test(stripHtml(html))) return html
   return `${html}\n<h2>Next steps</h2>\n${p('Pick one practical action, gather the numbers, and compare the tradeoffs before acting. A smaller step that you can maintain is usually more useful than a rushed change that creates new problems.')}`
@@ -276,13 +358,16 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   body = sanitizeAdvisoryPhrasing(body)
   body = ensureGeneralDisclaimer(body, category)
   body = buildUsefulDepthSections(body, keyword, category)
+  body = ensureKeyTakeaways(body, keyword, category)
+  body = ensureInternalLink(body, category)
+  body = ensureMinimumDepth(body, keyword, category)
   body = ensureFaq(body)
   body = ensureConclusion(body)
   body = body.replace(/\n{3,}/g, '\n\n').trim()
 
-  const title = post.title || `${titleCase(keyword)}: Step-by-Step Guide`
+  const title = normalizeArticleTitle(post.title || `${titleCase(keyword)}: Step-by-Step Guide`, keyword)
   const excerpt = post.excerpt || `Learn ${keyword} with practical examples, common mistakes, safer next steps, and a clear checklist for everyday financial decisions.`
-  const seoTitle = trimSeoTitle(cleanSeoTitle(post.seo_title || title), keyword)
+  const seoTitle = buildSeoTitle(post.seo_title || title, keyword)
   const seoDescription = trimSeoDescription(post.seo_description || excerpt, keyword)
 
   const after = evaluateFinanceArticle({

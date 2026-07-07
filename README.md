@@ -1,46 +1,27 @@
-# AI Editorial Engine Phase 2
+# CashClimb Editorial Engine Fix
 
-Apply this patch to CashClimb first.
+Apply this patch to the CashClimb repo root.
 
-This is the first real platform behavior upgrade after the foundation patch. It changes the workflow from simple draft generation to an editorial loop.
+It fixes the Phase 2 loop where articles stayed at score 80 after running the AI Editorial Engine.
 
-## What it does
+## What changed
 
-- Draft generation now runs the AI Editorial Engine automatically.
-- The engine runs up to 3 improvement passes.
-- Target score is 95.
-- Score below 95 stays `review_required`.
-- Score 95+ becomes `ready_for_review`.
-- Nothing is published automatically.
-- Admin still has to approve before publish.
-- Existing drafts get a new `Run AI Editorial Engine` button.
-- Includes the keyword fallback fix, with the TypeScript guard fixed.
+- The content fixer now adds the missing Key Takeaways section.
+- It adds a safe internal `/blog` link when no internal link exists.
+- It expands thin drafts to at least about 950 words.
+- It normalizes long/short titles into the scoring range.
+- It builds SEO titles that fit the required length.
+- Missing featured image is now informational and does not block editorial readiness.
 
 ## Apply
 
-Copy the `cashclimb` folder contents into the CashClimb repo root.
-
-Then run the Supabase SQL file:
-
-```text
-cashclimb/supabase/migrations/007_ai_editorial_engine.sql
-```
-
-Then run:
+Copy the `cashclimb` folder contents into your CashClimb repo root, then run:
 
 ```bash
 npm run build
 git add .
-git commit -m "Add AI editorial engine workflow"
+git commit -m "Fix AI editorial engine scoring loop"
 git push origin main
 ```
 
-## Notes
-
-I verified TypeScript with:
-
-```bash
-npx tsc --noEmit
-```
-
-The full Next build could not be completed inside this sandbox because Next tried to download the Linux SWC package and the sandbox has no external npm network access. Your Vercel build should perform the real production build.
+No SQL migration is needed for this patch.
