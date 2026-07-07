@@ -265,7 +265,7 @@ export function buildArticleDraft(input: DraftInput) {
   const disclaimer = needsDisclaimer ? paragraph('<em>This article is for general educational purposes and is not personal financial, investment, tax, or legal advice.</em>') : ''
   const faqs = faqFor(category)
 
-  const html = [
+  let html = [
     disclaimer,
     paragraph(`${sentenceCase(topic)} matters because small details can change the real cost or risk. This guide focuses on ${frame.focus}, so you can compare the choice without turning it into a generic money rule.`),
     '<h2>Quick Answer</h2>',
