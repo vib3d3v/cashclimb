@@ -1,4 +1,9 @@
 import type { WorkflowCheck, WorkflowEvaluation, WorkflowStatus } from '@/types'
+import {
+  keywordAppearsNaturally,
+  keywordCoverage,
+  keywordLooksSeoWorthy,
+} from '@/lib/seo/keyword-quality'
 
 export const AUTOMATION_QUALITY_THRESHOLD = 95
 
@@ -246,11 +251,32 @@ export function evaluateFinanceArticle(input: {
 
   if (input.primaryKeyword) {
     const keyword = input.primaryKeyword.toLowerCase()
+    const titleAndOpening = `${input.title} ${plainText.slice(0, 1200)}`
+    const titleCoverage = keywordCoverage(keyword, input.title)
+
+    checks.push(
+      buildCheck(
+        'Primary keyword is SEO-worthy',
+        keywordLooksSeoWorthy(keyword),
+        'Use a specific search-intent keyword, not a broad one-word topic.',
+        'warn'
+      )
+    )
+
+    checks.push(
+      buildCheck(
+        'Title matches search intent',
+        titleCoverage >= 0.55 || keywordCoverage(keyword, titleAndOpening) >= 0.7,
+        'The title should contain the main searchable terms without forcing the exact phrase.',
+        'warn'
+      )
+    )
+
     checks.push(
       buildCheck(
         'Keyword appears naturally',
-        input.title.toLowerCase().includes(keyword) || lower.slice(0, 600).includes(keyword),
-        'Primary keyword should appear in the title or opening section.',
+        keywordAppearsNaturally(keyword, input.title, plainText),
+        'Primary keyword terms should appear naturally in the title or opening section.',
         'warn'
       )
     )

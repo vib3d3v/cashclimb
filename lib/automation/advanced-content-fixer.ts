@@ -2,6 +2,14 @@ import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
 import type { Category, WorkflowEvaluation } from '@/types'
 import { cleanSeoTitle } from '@/lib/seo/clean-title'
+import {
+  buildSeoArticleTitle,
+  buildSeoDescription,
+  buildSeoMetaTitle,
+  canonicalPrimaryKeyword,
+  keywordAppearsNaturally,
+  titleCaseKeyword,
+} from '@/lib/seo/keyword-quality'
 
 const CATEGORY_VALUES: Category[] = ['Investing', 'Personal Finance', 'Credit', 'Taxes', 'Real Estate', 'Retirement']
 const YMYL_CATEGORIES = new Set(['Investing', 'Retirement', 'Taxes', 'Real Estate'])
@@ -52,11 +60,7 @@ function list(items: string[]) {
 }
 
 function titleCase(value = '') {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+  return titleCaseKeyword(value)
 }
 
 function categoryFromPost(post: any): Category {
@@ -124,6 +128,23 @@ function ensureGeneralDisclaimer(html: string, category: Category) {
   if (!YMYL_CATEGORIES.has(category)) return html
   if (/not personal financial|not financial advice|general educational purposes/i.test(stripHtml(html))) return html
   return `${p('This article is for general educational purposes only and is not personal financial, investment, tax, or legal advice. Consider your full situation and speak with a qualified professional before making major money decisions.')}\n${html}`
+}
+
+
+function ensureKeywordInOpening(html: string, keyword: string) {
+  if (keywordAppearsNaturally(keyword, '', stripHtml(html).slice(0, 1200))) return html
+
+  const opening = p(`This guide explains ${keyword} in practical terms, including what to compare, what can go wrong, and which details to verify before acting.`)
+
+  const disclaimerMatch = html.match(/^(\s*<p>[^<]*(?:general educational purposes|not personal financial|not financial advice)[\s\S]*?<\/p>\s*)/i)
+  if (disclaimerMatch?.[0]) {
+    return `${disclaimerMatch[0]}
+${opening}
+${html.slice(disclaimerMatch[0].length)}`
+  }
+
+  return `${opening}
+${html}`
 }
 
 function officialSourceParagraph(category: Category) {
@@ -247,32 +268,14 @@ function ensureMinimumDepth(html: string, keyword: string, category: Category) {
 
 function normalizeArticleTitle(value: string, keyword: string) {
   const clean = String(value || '').replace(/\s+/g, ' ').trim()
-  if (clean.length >= 35 && clean.length <= 70) return clean
-
-  const base = titleCase(keyword)
-  const candidates = [
-    `${base}: Practical Steps and Mistakes to Avoid`,
-    `${base}: Simple Checklist and Next Steps`,
-    `${base}: What to Check First`,
-  ]
-
-  return candidates.find((candidate) => candidate.length >= 35 && candidate.length <= 70)
-    || base.slice(0, 70)
+  if (clean.length >= 35 && clean.length <= 70 && keywordAppearsNaturally(keyword, clean, '')) return clean
+  return buildSeoArticleTitle(keyword)
 }
 
 function buildSeoTitle(value: string, keyword: string) {
   const clean = cleanSeoTitle(value || '')
-  if (clean.length >= 40 && clean.length <= 65) return clean
-
-  const base = titleCase(keyword)
-  const candidates = [
-    `${base}: Checklist and Common Mistakes`,
-    `${base}: Practical CashClimb Guide`,
-    `${base}: What to Check First`,
-  ]
-
-  return candidates.find((candidate) => candidate.length >= 40 && candidate.length <= 65)
-    || `${base} Guide`.slice(0, 65)
+  if (clean.length >= 40 && clean.length <= 65 && keywordAppearsNaturally(keyword, clean, '')) return clean
+  return buildSeoMetaTitle(keyword)
 }
 
 function ensureConclusion(html: string) {
@@ -357,6 +360,7 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   body = removeBadFillerSections(body)
   body = sanitizeAdvisoryPhrasing(body)
   body = ensureGeneralDisclaimer(body, category)
+  body = ensureKeywordInOpening(body, keyword)
   body = buildUsefulDepthSections(body, keyword, category)
   body = ensureKeyTakeaways(body, keyword, category)
   body = ensureInternalLink(body, category)
@@ -368,7 +372,7 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   const title = normalizeArticleTitle(post.title || `${titleCase(keyword)}: Step-by-Step Guide`, keyword)
   const excerpt = post.excerpt || `Learn ${keyword} with practical examples, common mistakes, safer next steps, and a clear checklist for everyday financial decisions.`
   const seoTitle = buildSeoTitle(post.seo_title || title, keyword)
-  const seoDescription = trimSeoDescription(post.seo_description || excerpt, keyword)
+  const seoDescription = trimSeoDescription(post.seo_description || buildSeoDescription(keyword) || excerpt, keyword)
 
   const after = evaluateFinanceArticle({
     title,

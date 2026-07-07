@@ -1,27 +1,36 @@
-# CashClimb Editorial Engine Fix
+# CashClimb SEO title and keyword quality fix
 
-Apply this patch to the CashClimb repo root.
+This patch makes the editorial engine smarter about keyword/title matching and improves SEO title generation.
 
-It fixes the Phase 2 loop where articles stayed at score 80 after running the AI Editorial Engine.
+## What it changes
 
-## What changed
+- Replaces the strict exact-match keyword warning with semantic keyword-term coverage.
+- Adds checks for SEO-worthy primary keywords and title/search-intent alignment.
+- Cleans noisy market suffixes like `(US/UK/CA/AU)` from new keyword inserts.
+- Filters weak/spammy keyword ideas before they enter the queue.
+- Generates cleaner SEO-focused article titles from the primary keyword.
+- Makes the AI editorial engine add the primary keyword naturally near the opening when needed.
+- Updates related keywords to use meaningful keyword terms instead of random filler.
 
-- The content fixer now adds the missing Key Takeaways section.
-- It adds a safe internal `/blog` link when no internal link exists.
-- It expands thin drafts to at least about 950 words.
-- It normalizes long/short titles into the scoring range.
-- It builds SEO titles that fit the required length.
-- Missing featured image is now informational and does not block editorial readiness.
+## Files changed
+
+- `lib/seo/keyword-quality.ts`
+- `lib/editorial-workflow.ts`
+- `lib/automation/advanced-content-fixer.ts`
+- `lib/automation/content.ts`
+- `lib/automation/db.ts`
 
 ## Apply
 
-Copy the `cashclimb` folder contents into your CashClimb repo root, then run:
+Copy the `cashclimb/` folder contents into the CashClimb repo root, then run:
 
 ```bash
 npm run build
 git add .
-git commit -m "Fix AI editorial engine scoring loop"
+git commit -m "Improve SEO title and keyword quality checks"
 git push origin main
 ```
 
-No SQL migration is needed for this patch.
+No SQL migration needed.
+
+After deployment, open an existing article and click **Run AI Editorial Engine** or **Re-run SEO Checklist**. The old keyword warning should stop appearing when the title/opening already contains the important searchable terms.

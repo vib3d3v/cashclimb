@@ -1,7 +1,15 @@
 import slugify from 'slugify'
 import readingTime from 'reading-time'
 import type { Category } from '@/types'
-import { evaluateFinanceArticle } from '@/lib/editorial-workflow'
+import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
+import {
+  buildSeoArticleTitle,
+  buildSeoDescription,
+  buildSeoMetaTitle,
+  canonicalPrimaryKeyword,
+  significantKeywordTerms,
+  titleCaseKeyword,
+} from '@/lib/seo/keyword-quality'
 import { resolvePostAuthorName } from '@/lib/authors'
 
 function safeString(value: any = '') {
@@ -95,7 +103,7 @@ const OFFICIAL_LINKS: Record<Category, { title: string; href: string }[]> = {
 }
 
 function cleanKeyword(value: any) {
-  return safeString(value).toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, ' ').trim()
+  return canonicalPrimaryKeyword(value)
 }
 
 function sentenceCase(value: any) {
@@ -104,7 +112,7 @@ function sentenceCase(value: any) {
 }
 
 function titleCase(value: any) {
-  return safeString(value).split(' ').filter(Boolean).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+  return titleCaseKeyword(value)
 }
 
 function naturalTopic(keyword: string) {
@@ -189,17 +197,11 @@ export function buildBrief(keyword: string, category: Category, intent = 'inform
 }
 
 function buildTitle(keyword: string, intent?: string | null) {
-  const topic = titleCase(naturalTopic(keyword)).replace(/:\s*$/, '').trim()
-  const normalizedIntent = (intent || '').toLowerCase()
-  if (/mistake|avoid/.test(keyword) || normalizedIntent === 'mistakes') return `${topic}: Mistakes to Avoid`
-  if (/checklist/.test(keyword) || normalizedIntent === 'checklist') return `${topic}: Practical Checklist`
-  if (/vs|compare|comparison/.test(keyword) || normalizedIntent === 'comparison') return `${topic}: Comparison Guide`
-  if (/how to/.test(keyword) || normalizedIntent === 'how-to') return `${topic}: Step-by-Step Guide`
-  return `${topic}: Clear Guide for Beginners`
+  return buildSeoArticleTitle(keyword, intent)
 }
 
 function buildSeoTitle(keyword: string, intent?: string | null) {
-  return buildTitle(keyword, intent).slice(0, 65)
+  return buildSeoMetaTitle(keyword, intent)
 }
 
 function trim(text: any, max: number) {
@@ -255,7 +257,7 @@ export function buildArticleDraft(input: DraftInput) {
   const title = trim(buildTitle(keyword, input.intent), 70)
   const seoTitle = trim(buildSeoTitle(keyword, input.intent), 65)
   const excerpt = trim(`A practical guide to ${topic}, including what to check, common mistakes, examples, and safer next steps.`, 155)
-  const seoDescription = trim(`Learn how ${topic} works, what to compare, common mistakes to avoid, and where to verify current finance rules.`, 155)
+  const seoDescription = trim(buildSeoDescription(keyword), 155)
   const author = resolvePostAuthorName({ title, category })
   const needsDisclaimer = ['Taxes', 'Investing', 'Retirement', 'Real Estate'].includes(category)
   const disclaimer = needsDisclaimer ? paragraph('<em>This article is for general educational purposes and is not personal financial, investment, tax, or legal advice.</em>') : ''
@@ -335,7 +337,7 @@ export function buildArticleDraft(input: DraftInput) {
     related_keywords: relatedKeywords(keyword, category),
     seo_title: seoTitle,
     seo_description: seoDescription,
-    status: evaluation.passed ? 'approved' : 'review_required',
+    status: nextStatusFromEvaluation(evaluation),
     published: false,
     quality_score: evaluation.score,
     risk_level: evaluation.risk_level,
@@ -350,6 +352,6 @@ export function buildArticleDraft(input: DraftInput) {
 }
 
 function relatedKeywords(keyword: any, category: Category) {
-  const words = safeString(keyword).split(' ').filter((word) => word.length > 3).slice(0, 4)
-  return Array.from(new Set([...words, category.toLowerCase(), 'checklist', 'beginner guide', 'common mistakes']))
+  const words = significantKeywordTerms(keyword).slice(0, 5)
+  return Array.from(new Set([...words, category.toLowerCase(), 'checklist', 'common mistakes', 'what to check']))
 }

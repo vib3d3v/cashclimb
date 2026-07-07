@@ -4,6 +4,7 @@ import { buildArticleDraft, generateKeywordIdeas } from './content'
 import { generateSerpApiKeywordIdeas } from './serpapi'
 import { cleanupExternalLinks } from '@/lib/normalize-links'
 import { runAIEditorialEngine } from '@/lib/platform/ai-editorial-engine'
+import { canonicalPrimaryKeyword, keywordLooksSeoWorthy } from '@/lib/seo/keyword-quality'
 
 function ensureCategory(category: string | null | undefined): Category {
   const allowed: Category[] = [
@@ -21,11 +22,7 @@ function ensureCategory(category: string | null | undefined): Category {
 }
 
 function cleanKeyword(value: any) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return canonicalPrimaryKeyword(value)
 }
 
 
@@ -172,7 +169,7 @@ export async function insertKeywordIdeas(input?: any) {
     }))
     .filter((idea) => {
       const key = `${idea.category}:${idea.keyword}`
-      if (!idea.keyword || seenCandidates.has(key)) return false
+      if (!idea.keyword || !keywordLooksSeoWorthy(idea.keyword) || seenCandidates.has(key)) return false
       seenCandidates.add(key)
       return true
     })
