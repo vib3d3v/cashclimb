@@ -1,4 +1,3 @@
-import slugify from 'slugify'
 import readingTime from 'reading-time'
 import type { Category } from '@/types'
 import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
@@ -331,7 +330,7 @@ export function buildArticleDraft(input: DraftInput) {
 
   return {
     title: cleanSeoText(title),
-    slug: slugify(keyword, { lower: true, strict: true }),
+    slug: cleanSlugText(keyword),
     excerpt: cleanSeoText(excerpt),
     body: html,
     category,

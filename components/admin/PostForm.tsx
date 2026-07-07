@@ -1,4 +1,5 @@
 import type { Category } from '@/types'
+import CoverImageField from './CoverImageField'
 
 const categories: Category[] = ['Personal Finance', 'Credit', 'Investing', 'Retirement', 'Taxes', 'Real Estate']
 const statuses = ['draft', 'improving', 'review_required', 'ready_for_review', 'approved', 'scheduled', 'published', 'rejected']
@@ -57,6 +58,7 @@ export default function PostForm({ post, action, submitLabel }: Props) {
           <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-[#6A6460]">SEO description</span>
           <input name="seo_description" defaultValue={post?.seo_description ?? ''} className="cc-input" />
         </label>
+        <CoverImageField initialUrl={post?.cover_url ?? ''} />
       </section>
 
       <section className="rounded-2xl border border-border bg-bg-2 p-6">

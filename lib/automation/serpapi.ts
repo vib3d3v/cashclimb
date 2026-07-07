@@ -1,4 +1,14 @@
 import type { Category } from '@/types'
+import {
+  buildKeywordQueries,
+  ensureCategory,
+  fallbackHighValueCandidates,
+  inferCategory,
+  inferIntent,
+  rankKeywordCandidates,
+  type KeywordCandidate,
+} from './keyword-intelligence'
+import { canonicalPrimaryKeyword } from '@/lib/seo/keyword-quality'
 
 export type SerpKeywordIdea = {
   keyword: string
@@ -8,189 +18,14 @@ export type SerpKeywordIdea = {
   brief: Record<string, unknown>
 }
 
-const CASHCLIMB_CATEGORIES: Category[] = [
-  'Personal Finance',
-  'Credit',
-  'Investing',
-  'Retirement',
-  'Taxes',
-  'Real Estate',
-]
-
-const CATEGORY_SEEDS: Record<Category, string[]> = {
-  'Personal Finance': [
-    'how to save money',
-    'monthly budget',
-    'emergency fund',
-    'paycheck budget',
-    'sinking funds',
-  ],
-  Credit: [
-    'credit score',
-    'credit utilization',
-    'credit card debt',
-    'secured credit card',
-    'credit report errors',
-  ],
-  Investing: [
-    'index funds',
-    'etf investing',
-    'dollar cost averaging',
-    'investment risk tolerance',
-    'brokerage account',
-  ],
-  Retirement: [
-    'retirement savings',
-    'ira vs 401k',
-    'employer match',
-    'compound interest retirement',
-    'catch up contributions',
-  ],
-  Taxes: [
-    'tax documents checklist',
-    'quarterly taxes',
-    'freelancer taxes',
-    'organize receipts for taxes',
-    'side hustle taxes',
-  ],
-  'Real Estate': [
-    'first time homebuyer',
-    'mortgage affordability',
-    'rent vs buy',
-    'closing costs',
-    'down payment savings',
-  ],
-}
-
-const QUESTION_PREFIXES = ['how to', 'what is', 'when to', 'best way to']
-const LOW_QUALITY_PATTERNS = [
-  /\bcasino\b/i,
-  /\bcrypto\b/i,
-  /\bforex\b/i,
-  /\bloan shark\b/i,
-  /\bpayday loan\b/i,
-  /\bget rich\b/i,
-  /\bguaranteed\b/i,
-  /\brisk free\b/i,
-  /\bfree money\b/i,
-]
-
 function apiKey() {
   return process.env.SERPAPI_API_KEY || process.env.SERP_API_KEY || process.env.SERPAPI_KEY || ''
 }
 
-function cleanKeyword(value: any) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function titleCase(value: string) {
-  return value
-    .split(' ')
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-}
-
-function ensureCategory(value: unknown): Category {
-  return CASHCLIMB_CATEGORIES.includes(value as Category) ? (value as Category) : 'Personal Finance'
-}
-
-function inferIntent(keyword: string, requested?: string | null) {
-  const request = String(requested || '').toLowerCase().trim()
-  if (request && request !== 'mixed') return request
-  if (/\b(vs|compare|comparison)\b/.test(keyword)) return 'comparison'
-  if (/\b(mistake|avoid|wrong)\b/.test(keyword)) return 'mistakes'
-  if (/\bchecklist\b/.test(keyword)) return 'checklist'
-  if (/^how to\b|step by step/.test(keyword)) return 'how-to'
-  if (/^what is\b|explained/.test(keyword)) return 'explainer'
-  return 'informational'
-}
-
-function looksSafe(keyword: string) {
-  if (keyword.length < 12 || keyword.length > 90) return false
-  if (keyword.split(' ').length < 3) return false
-  return !LOW_QUALITY_PATTERNS.some((pattern) => pattern.test(keyword))
-}
-
-function buildBrief(keyword: string, category: Category, intent: string, input?: any) {
-  return {
-    keyword,
-    category,
-    intent,
-    angle: `Answer the search intent behind "${keyword}" with a practical, cautious personal-finance guide.`,
-    audience: input?.audience || 'Beginners',
-    market: input?.market || 'US / Canada / UK / Australia',
-    source: 'serpapi',
-    pillar_topic: titleCase(category),
-    cluster_type: intent === 'comparison' ? 'comparison' : intent === 'checklist' ? 'checklist' : 'supporting',
-    requiredSections: [
-      'Quick Answer',
-      'Key Takeaways',
-      'Decision Checklist',
-      'Risk and Tradeoffs',
-      'Common Mistakes to Avoid',
-      'What You Can Do Next',
-      'FAQ',
-      'Sources',
-    ],
-  }
-}
-
-function buildIdea(keyword: string, category: Category, input?: any): SerpKeywordIdea | null {
-  const clean = cleanKeyword(keyword)
-  if (!looksSafe(clean)) return null
-
-  const intent = inferIntent(clean, input?.intentMix)
-  const intentBoost = /how to|what is|checklist|mistake|vs|explained|beginner/.test(clean) ? 0 : 10
-  const lengthPenalty = Math.max(0, clean.split(' ').length - 8) * 2
-
-  return {
-    keyword: clean,
-    category,
-    intent,
-    priority: 10 + intentBoost + lengthPenalty,
-    brief: buildBrief(clean, category, intent, input),
-  }
-}
-
-function categoriesForFocus(focus?: string | null): Category[] {
-  if (focus && focus !== 'Mixed' && CASHCLIMB_CATEGORIES.includes(focus as Category)) {
-    return [focus as Category]
-  }
-  return CASHCLIMB_CATEGORIES
-}
-
-function buildQueries(category: Category, requested: number, categoryCount: number) {
-  const seeds = CATEGORY_SEEDS[category]
-  const perCategory = Math.max(1, Math.min(4, Math.ceil(requested / Math.max(1, categoryCount))))
-  const pickedSeeds = seeds.slice(0, perCategory)
-  const queries: string[] = []
-
-  for (const seed of pickedSeeds) {
-    queries.push(seed)
-    for (const prefix of QUESTION_PREFIXES.slice(0, 2)) {
-      if (!seed.startsWith(prefix)) queries.push(`${prefix} ${seed}`)
-    }
-  }
-
-  return queries.slice(0, Math.max(2, perCategory * 2))
-}
-
-async function fetchAutocomplete(query: string): Promise<string[]> {
+async function fetchJson(params: URLSearchParams) {
   const key = apiKey()
-  if (!key) return []
-
-  const params = new URLSearchParams({
-    engine: 'google_autocomplete',
-    q: query,
-    gl: 'us',
-    hl: 'en',
-    api_key: key,
-  })
+  if (!key) return null
+  params.set('api_key', key)
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 12_000)
@@ -200,24 +35,79 @@ async function fetchAutocomplete(query: string): Promise<string[]> {
       cache: 'no-store',
       signal: controller.signal,
     })
-
     if (!response.ok) {
       const text = await response.text().catch(() => '')
-      console.warn('[serpapi] autocomplete failed', response.status, text.slice(0, 300))
-      return []
+      console.warn('[serpapi] request failed', response.status, text.slice(0, 300))
+      return null
     }
-
-    const data = await response.json()
-    const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : []
-
-    return suggestions
-      .map((item: any) => item?.value || item?.suggestion || item?.term || '')
-      .filter(Boolean)
+    return await response.json()
   } catch (error: any) {
-    console.warn('[serpapi] autocomplete error', error?.message || error)
-    return []
+    console.warn('[serpapi] request error', error?.message || error)
+    return null
   } finally {
     clearTimeout(timeout)
+  }
+}
+
+async function fetchAutocomplete(query: string): Promise<string[]> {
+  const data = await fetchJson(new URLSearchParams({
+    engine: 'google_autocomplete',
+    q: query,
+    gl: 'us',
+    hl: 'en',
+  }))
+
+  const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : []
+  return suggestions
+    .map((item: any) => item?.value || item?.suggestion || item?.term || '')
+    .filter(Boolean)
+}
+
+async function fetchGoogleSerp(query: string) {
+  const data = await fetchJson(new URLSearchParams({
+    engine: 'google',
+    q: query,
+    google_domain: 'google.com',
+    gl: 'us',
+    hl: 'en',
+    num: '10',
+  }))
+
+  if (!data) return { keywords: [], signals: {} as Record<string, any> }
+
+  const related = Array.isArray(data?.related_searches)
+    ? data.related_searches.map((item: any) => item?.query || item?.title || '').filter(Boolean)
+    : []
+  const paa = Array.isArray(data?.related_questions)
+    ? data.related_questions.map((item: any) => item?.question || '').filter(Boolean)
+    : []
+  const organic = Array.isArray(data?.organic_results) ? data.organic_results : []
+  const titles = organic.map((item: any) => `${item?.title || ''} ${item?.snippet || ''}`).join(' ')
+  const topBrands = (titles.match(/nerdwallet|bankrate|investopedia|forbes|cnbc|experian|equifax|transunion|fidelity|vanguard/gi) || []).length
+  const gov = (titles.match(/\.gov|irs|consumerfinance|sec\.gov/gi) || []).length
+  const bigPublisher = (titles.match(/nerdwallet|bankrate|investopedia|forbes|cnbc|marketwatch/gi) || []).length
+
+  return {
+    keywords: [...related, ...paa],
+    signals: {
+      related: related.length ? 1 : 0,
+      paa: paa.length ? 1 : 0,
+      topBrands,
+      gov,
+      bigPublisher,
+    },
+  }
+}
+
+function mergeSignals(existing: Record<string, any> = {}, next: Record<string, any> = {}) {
+  return {
+    appearances: Number(existing.appearances || 0) + Number(next.appearances || 0),
+    autocomplete: Number(existing.autocomplete || 0) + Number(next.autocomplete || 0),
+    related: Math.max(Number(existing.related || 0), Number(next.related || 0)),
+    paa: Math.max(Number(existing.paa || 0), Number(next.paa || 0)),
+    topBrands: Math.max(Number(existing.topBrands || 0), Number(next.topBrands || 0)),
+    gov: Math.max(Number(existing.gov || 0), Number(next.gov || 0)),
+    bigPublisher: Math.max(Number(existing.bigPublisher || 0), Number(next.bigPublisher || 0)),
   }
 }
 
@@ -228,35 +118,83 @@ export async function generateSerpApiKeywordIdeas(input?: {
   intentMix?: string | null
   market?: string | null
   riskTolerance?: string | null
+  existingKeywords?: string[]
+  existingTitles?: string[]
 }): Promise<SerpKeywordIdea[]> {
-  if (!apiKey()) return []
+  const requested = Math.min(100, Math.max(1, Number(input?.howMany ?? 20) || 20))
 
-  const requested = Math.min(50, Math.max(1, Number(input?.howMany ?? 20) || 20))
-  const categories = categoriesForFocus(input?.focus ?? null)
-  const ideas: SerpKeywordIdea[] = []
-  const seen = new Set<string>()
-
-  for (const category of categories) {
-    for (const query of buildQueries(category, requested, categories.length)) {
-      const suggestions = await fetchAutocomplete(query)
-      for (const suggestion of suggestions) {
-        const idea = buildIdea(suggestion, ensureCategory(category), input)
-        if (!idea) continue
-
-        const key = `${idea.category}:${idea.keyword}`
-        if (seen.has(key)) continue
-
-        seen.add(key)
-        ideas.push(idea)
-      }
-
-      if (ideas.length >= requested * 2) break
-    }
-
-    if (ideas.length >= requested * 2) break
+  if (!apiKey()) {
+    return rankKeywordCandidates({
+      candidates: fallbackHighValueCandidates({ focus: input?.focus ?? 'Mixed' }),
+      requested,
+      existingKeywords: input?.existingKeywords,
+      existingTitles: input?.existingTitles,
+      options: input,
+    }).slice(0, requested).map(toSerpKeywordIdea)
   }
 
-  return ideas
-    .sort((a, b) => a.priority - b.priority || a.keyword.localeCompare(b.keyword))
-    .slice(0, requested)
+  const candidateMap = new Map<string, { keyword: string; category: Category; source: string; signals: Record<string, any> }>()
+  const queries = buildKeywordQueries({ focus: input?.focus ?? 'Mixed', howMany: requested * 5 })
+  const queryLimit = Math.min(36, queries.length)
+
+  for (const { query, category } of queries.slice(0, queryLimit)) {
+    const autocomplete = await fetchAutocomplete(query)
+    for (const suggestion of autocomplete) {
+      const keyword = canonicalPrimaryKeyword(suggestion)
+      const inferred = inferCategory(keyword, ensureCategory(category))
+      const key = `${inferred}:${keyword}`
+      const current = candidateMap.get(key)
+      candidateMap.set(key, {
+        keyword,
+        category: inferred,
+        source: 'serpapi-autocomplete',
+        signals: mergeSignals(current?.signals, { appearances: 1, autocomplete: 1 }),
+      })
+    }
+
+    const serp = await fetchGoogleSerp(query)
+    for (const suggestion of serp.keywords) {
+      const keyword = canonicalPrimaryKeyword(suggestion)
+      const inferred = inferCategory(keyword, ensureCategory(category))
+      const key = `${inferred}:${keyword}`
+      const current = candidateMap.get(key)
+      candidateMap.set(key, {
+        keyword,
+        category: inferred,
+        source: 'serpapi-serp',
+        signals: mergeSignals(current?.signals, { ...serp.signals, appearances: 1 }),
+      })
+    }
+
+    if (candidateMap.size >= requested * 12) break
+  }
+
+  for (const fallback of fallbackHighValueCandidates({ focus: input?.focus ?? 'Mixed' })) {
+    const keyword = canonicalPrimaryKeyword(fallback.keyword)
+    const key = `${fallback.category}:${keyword}`
+    if (!candidateMap.has(key)) candidateMap.set(key, fallback)
+  }
+
+  const ranked = rankKeywordCandidates({
+    candidates: Array.from(candidateMap.values()).map((candidate) => ({
+      ...candidate,
+      intent: inferIntent(candidate.keyword, input?.intentMix),
+    })),
+    requested,
+    existingKeywords: input?.existingKeywords,
+    existingTitles: input?.existingTitles,
+    options: input,
+  })
+
+  return ranked.slice(0, requested).map(toSerpKeywordIdea)
+}
+
+function toSerpKeywordIdea(candidate: KeywordCandidate): SerpKeywordIdea {
+  return {
+    keyword: candidate.keyword,
+    category: candidate.category,
+    intent: candidate.intent,
+    priority: candidate.priority,
+    brief: candidate.brief,
+  }
 }
