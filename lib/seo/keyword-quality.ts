@@ -19,12 +19,39 @@ const LOW_VALUE_PATTERNS = [
 
 const INTENT_WORDS = /\b(how to|checklist|mistakes?|avoid|vs|compare|comparison|explained|calculator|template|examples?|guide|what is|when to|costs?|fees?|rules?)\b/i
 
-export function normalizeKeywordText(value: any = '') {
+export function removeGeoMarketNoise(value: any = '') {
   return String(value || '')
+    .replace(/\((?:\s*(?:us|u\.s\.|usa|uk|u\.k\.|ca|canada|au|australia)\s*[\/|,\-]?\s*){2,}\)/gi, ' ')
+    .replace(/\b(?:us\s*\/\s*uk\s*\/\s*ca\s*\/\s*au|u\.s\.\s*\/\s*u\.k\.\s*\/\s*ca\s*\/\s*au|us\s+uk\s+ca\s+au|us-uk-ca-au|usukcaau|us\s*uk\s*ca\s*au)\b/gi, ' ')
+    .replace(/\b(?:usa\s*\/\s*uk\s*\/\s*canada\s*\/\s*australia|usa\s+uk\s+canada\s+australia)\b/gi, ' ')
+    .replace(/\b(?:for|in|across)\s*$/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function cleanSeoText(value: any = '') {
+  return removeGeoMarketNoise(value)
+    .replace(/\s+([:;,.!?])/g, '$1')
+    .replace(/([:;,.!?]){2,}/g, '$1')
+    .replace(/[\s-]+$/g, '')
+    .replace(/^[-\s:;,.]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function cleanKeywordList(value: any = '') {
+  return cleanSeoText(value)
+    .split(',')
+    .map((item) => canonicalPrimaryKeyword(item))
+    .filter(Boolean)
+    .filter((item, index, arr) => arr.indexOf(item) === index)
+    .join(', ')
+}
+
+export function normalizeKeywordText(value: any = '') {
+  return cleanSeoText(value)
     .toLowerCase()
     .replace(/&amp;/g, 'and')
-    .replace(/\((?:us|uk|ca|au|usa|canada|australia|\/|\s)+\)/gi, ' ')
-    .replace(/\b(?:us|uk|ca|au)\s*\/\s*(?:us|uk|ca|au)(?:\s*\/\s*(?:us|uk|ca|au))*\b/gi, ' ')
     .replace(/[^a-z0-9\s-]/g, ' ')
     .replace(/-/g, ' ')
     .replace(/\s+/g, ' ')
@@ -118,7 +145,7 @@ export function titleCaseKeyword(value: any = '') {
 }
 
 function compactTitle(value: string, max = 70) {
-  let title = value.replace(/\s+/g, ' ').trim()
+  let title = cleanSeoText(value).replace(/\s+/g, ' ').trim()
   title = title.replace(/\bfor Beginners\b/i, '')
   title = title.replace(/\bStep by Step\b/i, 'Step-by-Step')
   title = title.replace(/\s+/g, ' ').trim()
@@ -174,8 +201,8 @@ export function buildSeoMetaTitle(keyword: any = '', intent?: any) {
 
 export function buildSeoDescription(keyword: any = '') {
   const clean = canonicalPrimaryKeyword(keyword)
-  const base = `Learn ${clean} with a practical checklist, common mistakes, examples, safer next steps, and current rules to verify before acting.`
+  const base = cleanSeoText(`Learn ${clean} with a practical checklist, common mistakes, examples, safer next steps, and current rules to verify before acting.`)
   if (base.length >= 120 && base.length <= 160) return base
   if (base.length > 160) return `${base.slice(0, 157).replace(/\s+\S*$/, '')}...`
-  return `A practical guide to ${clean}, including what to compare, common mistakes, examples, FAQs, and safer next steps before acting.`.slice(0, 160)
+  return cleanSeoText(`A practical guide to ${clean}, including what to compare, common mistakes, examples, FAQs, and safer next steps before acting.`).slice(0, 160)
 }

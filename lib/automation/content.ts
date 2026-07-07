@@ -7,6 +7,8 @@ import {
   buildSeoDescription,
   buildSeoMetaTitle,
   canonicalPrimaryKeyword,
+  cleanKeywordList,
+  cleanSeoText,
   significantKeywordTerms,
   titleCaseKeyword,
 } from '@/lib/seo/keyword-quality'
@@ -107,7 +109,7 @@ function cleanKeyword(value: any) {
 }
 
 function sentenceCase(value: any) {
-  const clean = safeString(value)
+  const clean = cleanSeoText(value)
   return clean.charAt(0).toUpperCase() + clean.slice(1)
 }
 
@@ -313,6 +315,7 @@ export function buildArticleDraft(input: DraftInput) {
     paragraph(`Treat ${topic} as a specific finance decision, not a slogan. Gather the numbers, compare the tradeoffs, verify current rules, and take the smallest useful next step.`),
   ].filter(Boolean).join('\n')
 
+  html = cleanSeoText(html)
   const readTime = readingTime(html.replace(/<[^>]*>/g, ' ')).text
   const evaluation = evaluateFinanceArticle({
     title,
@@ -326,17 +329,17 @@ export function buildArticleDraft(input: DraftInput) {
   })
 
   return {
-    title,
+    title: cleanSeoText(title),
     slug: slugify(keyword, { lower: true, strict: true }),
-    excerpt,
+    excerpt: cleanSeoText(excerpt),
     body: html,
     category,
     author,
     read_time: readTime,
     primary_keyword: keyword,
-    related_keywords: relatedKeywords(keyword, category),
-    seo_title: seoTitle,
-    seo_description: seoDescription,
+    related_keywords: cleanKeywordList(relatedKeywords(keyword, category)),
+    seo_title: cleanSeoText(seoTitle),
+    seo_description: cleanSeoText(seoDescription),
     status: nextStatusFromEvaluation(evaluation),
     published: false,
     quality_score: evaluation.score,

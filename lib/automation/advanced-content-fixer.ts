@@ -1,3 +1,4 @@
+import slugify from 'slugify'
 import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
 import type { Category, WorkflowEvaluation } from '@/types'
@@ -7,6 +8,8 @@ import {
   buildSeoDescription,
   buildSeoMetaTitle,
   canonicalPrimaryKeyword,
+  cleanKeywordList,
+  cleanSeoText,
   keywordAppearsNaturally,
   titleCaseKeyword,
 } from '@/lib/seo/keyword-quality'
@@ -68,14 +71,14 @@ function categoryFromPost(post: any): Category {
 }
 
 function primaryKeyword(post: any) {
-  const explicit = String(post?.primary_keyword || post?.primaryKeyword || '').trim()
-  if (explicit) return explicit.toLowerCase()
-  return String(post?.title || 'personal finance guide')
-    .replace(/[:|].*$/, '')
-    .replace(/\b(a|an|the|guide|cashclimb|practical|simple|complete)\b/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase() || 'personal finance guide'
+  const explicit = canonicalPrimaryKeyword(post?.primary_keyword || post?.primaryKeyword || '')
+  if (explicit) return explicit
+
+  return canonicalPrimaryKeyword(
+    String(post?.title || 'personal finance guide')
+      .replace(/[:|].*$/, '')
+      .replace(/\b(a|an|the|guide|cashclimb|practical|simple|complete)\b/gi, '')
+  ) || 'personal finance guide'
 }
 
 function readTimeFor(html: string) {
@@ -267,7 +270,7 @@ function ensureMinimumDepth(html: string, keyword: string, category: Category) {
 }
 
 function normalizeArticleTitle(value: string, keyword: string) {
-  const clean = String(value || '').replace(/\s+/g, ' ').trim()
+  const clean = cleanSeoText(value).replace(/\s+/g, ' ').trim()
   if (clean.length >= 35 && clean.length <= 70 && keywordAppearsNaturally(keyword, clean, '')) return clean
   return buildSeoArticleTitle(keyword)
 }
@@ -290,13 +293,13 @@ function ensureFaq(html: string) {
 
 function trimSeoTitle(value: string, keyword: string) {
   const fallback = `${titleCase(keyword)} Guide`
-  const base = String(value || fallback).replace(/\s+/g, ' ').trim()
+  const base = cleanSeoText(value || fallback).replace(/\s+/g, ' ').trim()
   return base.length >= 40 && base.length <= 65 ? base : fallback.slice(0, 65)
 }
 
 function trimSeoDescription(value: string, keyword: string) {
   const fallback = `A practical guide to ${keyword}, including examples, common mistakes, safer next steps, FAQs, and a clear checklist for readers.`
-  let base = String(value || fallback).replace(/\s+/g, ' ').trim()
+  let base = cleanSeoText(value || fallback).replace(/\s+/g, ' ').trim()
   if (base.length < 120) base = fallback
   if (base.length > 160) base = base.slice(0, 157).replace(/\s+\S*$/, '') + '...'
   return base
@@ -322,6 +325,9 @@ async function safeUpdatePost(postId: string, update: Record<string, any>) {
     title: update.title,
     excerpt: update.excerpt,
     body: update.body,
+    slug: update.slug,
+    primary_keyword: update.primary_keyword,
+    related_keywords: update.related_keywords,
     read_time: update.read_time,
     seo_title: update.seo_title,
     seo_description: update.seo_description,
@@ -356,7 +362,7 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
     coverUrl: post.cover_url || null,
   })
 
-  let body = String(post.body || '')
+  let body = cleanSeoText(String(post.body || ''))
   body = removeBadFillerSections(body)
   body = sanitizeAdvisoryPhrasing(body)
   body = ensureGeneralDisclaimer(body, category)
@@ -370,9 +376,11 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
   body = body.replace(/\n{3,}/g, '\n\n').trim()
 
   const title = normalizeArticleTitle(post.title || `${titleCase(keyword)}: Step-by-Step Guide`, keyword)
-  const excerpt = post.excerpt || `Learn ${keyword} with practical examples, common mistakes, safer next steps, and a clear checklist for everyday financial decisions.`
+  const excerpt = cleanSeoText(post.excerpt || `Learn ${keyword} with practical examples, common mistakes, safer next steps, and a clear checklist for everyday financial decisions.`)
   const seoTitle = buildSeoTitle(post.seo_title || title, keyword)
   const seoDescription = trimSeoDescription(post.seo_description || buildSeoDescription(keyword) || excerpt, keyword)
+  const slug = slugify(keyword, { lower: true, strict: true })
+  const relatedKeywords = cleanKeywordList(post.related_keywords || '')
 
   const after = evaluateFinanceArticle({
     title,
@@ -391,8 +399,11 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
 
   const updatedPost = await safeUpdatePost(postId, {
     title,
+    slug: post.published ? post.slug : slug,
     excerpt,
     body,
+    primary_keyword: keyword,
+    related_keywords: relatedKeywords,
     read_time: readTimeFor(body),
     seo_title: seoTitle,
     seo_description: seoDescription,

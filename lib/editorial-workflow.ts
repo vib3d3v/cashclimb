@@ -3,6 +3,8 @@ import {
   keywordAppearsNaturally,
   keywordCoverage,
   keywordLooksSeoWorthy,
+  cleanSeoText,
+  canonicalPrimaryKeyword,
 } from '@/lib/seo/keyword-quality'
 
 export const AUTOMATION_QUALITY_THRESHOLD = 95
@@ -92,7 +94,9 @@ export function evaluateFinanceArticle(input: {
   seoDescription?: string | null
   coverUrl?: string | null
 }): WorkflowEvaluation {
-  const plainText = stripHtml(input.body)
+  const cleanTitle = cleanSeoText(input.title)
+  const cleanKeyword = canonicalPrimaryKeyword(input.primaryKeyword || '')
+  const plainText = stripHtml(cleanSeoText(input.body))
   const lower = plainText.toLowerCase()
   const checks: WorkflowCheck[] = []
   const disclaimerNeeded = ['Taxes', 'Investing', 'Retirement', 'Real Estate'].includes(
@@ -115,7 +119,7 @@ export function evaluateFinanceArticle(input: {
   checks.push(
     buildCheck(
       'Title exists',
-      input.title.trim().length > 0,
+      cleanTitle.trim().length > 0,
       'Every article needs a clear title.',
       'error'
     )
@@ -124,7 +128,7 @@ export function evaluateFinanceArticle(input: {
   checks.push(
     buildCheck(
       'Title length looks healthy',
-      input.title.trim().length >= 35 && input.title.trim().length <= 70,
+      cleanTitle.trim().length >= 35 && cleanTitle.trim().length <= 70,
       'Aim for 35 to 70 characters.',
       'warn'
     )

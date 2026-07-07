@@ -1,36 +1,21 @@
-# CashClimb SEO title and keyword quality fix
+# CashClimb Geo Cleaner Fix
 
-This patch makes the editorial engine smarter about keyword/title matching and improves SEO title generation.
+Patch this into the CashClimb repo root.
 
-## What it changes
+Fixes:
+- Removes normalized geo suffixes like `usukcaau`, `US/UK/CA/AU`, `us uk ca au`, and `(US/UK/CA/AU)`.
+- Cleans title, primary keyword, SEO title, SEO description, excerpt, related keywords, and draft body.
+- Re-runs the cleaner inside the AI Editorial Engine before scoring.
+- Cleans unpublished draft slugs when the editorial engine runs.
+- Keeps published slugs unchanged to avoid breaking live URLs.
 
-- Replaces the strict exact-match keyword warning with semantic keyword-term coverage.
-- Adds checks for SEO-worthy primary keywords and title/search-intent alignment.
-- Cleans noisy market suffixes like `(US/UK/CA/AU)` from new keyword inserts.
-- Filters weak/spammy keyword ideas before they enter the queue.
-- Generates cleaner SEO-focused article titles from the primary keyword.
-- Makes the AI editorial engine add the primary keyword naturally near the opening when needed.
-- Updates related keywords to use meaningful keyword terms instead of random filler.
-
-## Files changed
-
-- `lib/seo/keyword-quality.ts`
-- `lib/editorial-workflow.ts`
-- `lib/automation/advanced-content-fixer.ts`
-- `lib/automation/content.ts`
-- `lib/automation/db.ts`
-
-## Apply
-
-Copy the `cashclimb/` folder contents into the CashClimb repo root, then run:
+After applying:
 
 ```bash
 npm run build
 git add .
-git commit -m "Improve SEO title and keyword quality checks"
+git commit -m "Fix geo suffix cleaner for SEO titles and keywords"
 git push origin main
 ```
 
-No SQL migration needed.
-
-After deployment, open an existing article and click **Run AI Editorial Engine** or **Re-run SEO Checklist**. The old keyword warning should stop appearing when the title/opening already contains the important searchable terms.
+For existing affected drafts, open the article and click **Run AI Editorial Engine**. It will clean the bad suffix from the fields and rescore.

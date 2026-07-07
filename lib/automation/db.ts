@@ -4,7 +4,7 @@ import { buildArticleDraft, generateKeywordIdeas } from './content'
 import { generateSerpApiKeywordIdeas } from './serpapi'
 import { cleanupExternalLinks } from '@/lib/normalize-links'
 import { runAIEditorialEngine } from '@/lib/platform/ai-editorial-engine'
-import { canonicalPrimaryKeyword, keywordLooksSeoWorthy } from '@/lib/seo/keyword-quality'
+import { canonicalPrimaryKeyword, cleanKeywordList, cleanSeoText, keywordLooksSeoWorthy } from '@/lib/seo/keyword-quality'
 
 function ensureCategory(category: string | null | undefined): Category {
   const allowed: Category[] = [
@@ -372,19 +372,19 @@ export async function createDraftFromKeyword(keywordId?: string | null): Promise
     const { data: post, error: postError } = await supabase
       .from('posts')
       .insert({
-        title: draft.title,
+        title: cleanSeoText(draft.title),
         slug: uniqueSlug,
-        excerpt: draft.excerpt,
-        body: cleanedBody,
+        excerpt: cleanSeoText(draft.excerpt),
+        body: cleanSeoText(cleanedBody),
         category: draft.category,
         author: draft.author,
         cover_url: null,
         published: false,
         read_time: draft.read_time,
-        primary_keyword: draft.primary_keyword,
-        related_keywords: draft.related_keywords,
-        seo_title: draft.seo_title,
-        seo_description: draft.seo_description,
+        primary_keyword: canonicalPrimaryKeyword(draft.primary_keyword),
+        related_keywords: cleanKeywordList(draft.related_keywords),
+        seo_title: cleanSeoText(draft.seo_title),
+        seo_description: cleanSeoText(draft.seo_description),
         status: draft.status,
         quality_score: draft.quality_score,
         risk_level: draft.risk_level,
