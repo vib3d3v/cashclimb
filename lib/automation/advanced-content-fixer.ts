@@ -150,6 +150,30 @@ function naturalOpeningForKeyword(keyword: string) {
   return `This guide explains the decision in practical terms, including what to compare, what can go wrong, and which details to verify before acting.`
 }
 
+
+function readableTopic(keyword: string) {
+  const clean = normalizeTargetKeyword(keyword)
+  if (/bill pay/.test(clean) && /overdraft/.test(clean)) return 'automatic bill pay'
+  if (/tax[-\s]?loss harvesting/.test(clean)) return 'tax-loss harvesting'
+  if (/co[-\s]?ownership agreement/.test(clean)) return 'co-ownership planning'
+  if (/hard inquiry/.test(clean)) return 'credit report disputes'
+  if (/currency conversion fee/.test(clean)) return 'currency conversion fees'
+  return 'this money decision'
+}
+
+function entityList(keyword: string, category: Category) {
+  const clean = normalizeTargetKeyword(keyword)
+  if (/bill pay/.test(clean) && /overdraft/.test(clean)) return ['automatic payments', 'payment dates', 'checking account buffer', 'balance alerts', 'recurring bills']
+  if (/tax[-\s]?loss harvesting/.test(clean)) return ['realized losses', 'wash-sale rule', 'replacement funds', 'taxable accounts', 'capital gains']
+  if (/co[-\s]?ownership agreement/.test(clean)) return ['ownership share', 'monthly costs', 'repairs', 'exit terms', 'decision rights']
+  if (category === 'Credit') return ['credit report', 'payment history', 'utilization', 'fees', 'disputes']
+  if (category === 'Investing') return ['fees', 'diversification', 'time horizon', 'risk tolerance', 'taxable account']
+  if (category === 'Retirement') return ['IRA', '401(k)', 'contribution limits', 'employer match', 'withdrawal rules']
+  if (category === 'Taxes') return ['IRS rules', 'records', 'receipts', 'withholding', 'deadlines']
+  if (category === 'Real Estate') return ['mortgage payment', 'closing costs', 'insurance', 'repairs', 'cash reserves']
+  return ['cash flow', 'fees', 'timing', 'account rules', 'emergency savings']
+}
+
 function ensureKeywordInOpening(html: string, keyword: string) {
   if (keywordAppearsNaturally(keyword, '', stripHtml(html).slice(0, 1200))) return html
 
@@ -187,22 +211,25 @@ function officialSourceParagraph(category: Category) {
 
 function buildUsefulDepthSections(html: string, keyword: string, category: Category) {
   let out = html
+  const topic = readableTopic(keyword)
+  const entities = entityList(keyword, category)
 
   out = appendSection(out, 'Quick Answer', [
-    p(`${titleCase(keyword)} should be handled as a specific financial decision. Compare cost, timing, risk, flexibility, and current rules before taking action.`),
+    p(`Treat ${topic} as a practical money setup, not a slogan. Compare timing, cost, flexibility, and downside before changing anything.`),
   ].join('\n'))
 
   out = appendSection(out, 'Decision Checklist', [
     list([
       'Check the total cost, not just the headline number.',
       'Confirm fees, taxes, interest, penalties, deadlines, and account rules.',
+      `Review ${entities.slice(0, 3).join(', ')} before making the change.`,
       'Compare one safer alternative before making a large or irreversible move.',
-      'Consider qualified help when the decision affects taxes, investments, legal documents, property, retirement accounts, or large debts.',
     ]),
   ].join('\n'))
 
   out = appendSection(out, 'Risk and Tradeoffs', [
     p('The main risk is applying general finance guidance without checking your own numbers. Income stability, debt level, time horizon, liquidity needs, tax treatment, and account rules can change the right next step.'),
+    p('A good setup leaves room for delay, error, or an unexpected expense. If the plan only works when everything goes perfectly, it is probably too fragile.'),
   ].join('\n'))
 
   out = appendSection(out, 'How to make the decision practical', [
@@ -211,7 +238,7 @@ function buildUsefulDepthSections(html: string, keyword: string, category: Categ
   ].join('\n'))
 
   out = appendSection(out, 'Real Examples', [
-    p(`For example, a reader comparing options related to ${keyword} might see one choice that looks easier today and another that is slower but safer. The better choice depends on cash flow, fees, timing, flexibility, and whether the decision creates risk later.`),
+    p(`For example, a reader comparing options around ${topic} might see one choice that looks easier today and another that is slower but safer. The better choice depends on cash flow, fees, timing, flexibility, and whether the decision creates risk later.`),
     p('That comparison is more helpful than a generic rule because it shows how the decision changes when the reader has irregular income, high-interest debt, a thin emergency fund, or a short deadline.'),
   ].join('\n'))
 
@@ -237,9 +264,11 @@ function buildUsefulDepthSections(html: string, keyword: string, category: Categ
 function ensureKeyTakeaways(html: string, keyword: string, category: Category) {
   if (/<h2[^>]*>\s*key takeaways\s*<\/h2>[\s\S]*?<ul>[\s\S]*?<\/ul>/i.test(html)) return html
 
+  const topic = readableTopic(keyword)
+  const entities = entityList(keyword, category)
   const items = [
-    `${titleCase(keyword)} should be checked against your actual costs, deadlines, account rules, and downside risk.`,
-    `Start with the numbers you can verify today instead of relying on a generic rule.`,
+    `Use ${topic} only after checking your actual costs, dates, account rules, and downside risk.`,
+    `Review ${entities.slice(0, 3).join(', ')} before making the first change.`,
     `For ${category.toLowerCase()} decisions, compare at least one safer alternative before taking a large or irreversible step.`,
     'Keep notes, screenshots, statements, or documents so you can review the decision later.',
   ]
@@ -249,6 +278,7 @@ function ensureKeyTakeaways(html: string, keyword: string, category: Category) {
   if (firstH2 === -1) return `${section}\n${html}`
   return `${html.slice(0, firstH2)}${section}\n${html.slice(firstH2)}`
 }
+
 
 function ensureInternalLink(html: string, category: Category) {
   if (/href="\/blog(?:\/|\?|"|#)/i.test(html)) return html
@@ -275,15 +305,18 @@ function ensureInternalLink(html: string, category: Category) {
 function ensureMinimumDepth(html: string, keyword: string, category: Category) {
   let out = html
   let guard = 0
+  const topic = readableTopic(keyword)
+  const entities = entityList(keyword, category)
   while (wordCount(out) < 950 && guard < 3) {
     guard += 1
     out = appendSection(out, guard === 1 ? 'Additional Checks Before You Act' : `Additional Checks Before You Act ${guard}`, [
-      p(`Before acting on ${keyword}, write down the exact action, the amount involved, the deadline, and the consequence if the decision goes wrong. This keeps the advice practical and helps you avoid treating a general article like personalized guidance.`),
-      p(`For a ${category.toLowerCase()} topic, the safer approach is usually to compare fees, eligibility rules, timing, taxes, flexibility, and the worst-case outcome. If any of those details are unclear, pause and verify them with the official provider or a qualified professional.`),
+      p(`Before acting on ${topic}, write down the exact action, the amount involved, the deadline, and the consequence if the decision goes wrong. This keeps the advice practical and avoids treating a general article like personalized guidance.`),
+      p(`For a ${category.toLowerCase()} topic, the safer approach is usually to compare ${entities.slice(0, 4).join(', ')}, flexibility, and the worst-case outcome. If any detail is unclear, pause and verify it with the official provider or a qualified professional.`),
     ].join('\n'))
   }
   return out
 }
+
 
 function normalizeArticleTitle(value: string, keyword: string) {
   const clean = cleanSeoText(value).replace(/\s+/g, ' ').trim()
@@ -314,12 +347,14 @@ function trimSeoTitle(value: string, keyword: string) {
 }
 
 function trimSeoDescription(value: string, keyword: string) {
-  const fallback = `A practical guide to ${keyword}, including examples, common mistakes, safer next steps, FAQs, and a clear checklist for readers.`
+  const topic = readableTopic(keyword)
+  const fallback = `A practical guide to ${topic}, including what to check, common mistakes, safer next steps, FAQs, and a clear checklist for readers.`
   let base = cleanSeoText(value || fallback).replace(/\s+/g, ' ').trim()
-  if (base.length < 120) base = fallback
-  if (base.length > 160) base = base.slice(0, 157).replace(/\s+\S*$/, '') + '...'
-  return base
+  if (base.length < 120 || base.length > 160 || !/[.!?]$/.test(base)) base = fallback
+  if (base.length > 160) base = 'Learn the key checks, risks, common mistakes, and safer next steps before making this financial decision.'
+  return /[.!?]$/.test(base) ? base : `${base}.`
 }
+
 
 async function updateQualityCheck(postId: string, evaluation: WorkflowEvaluation) {
   const supabase = createAdminClient()
@@ -419,7 +454,7 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
     category,
     seoTitle,
     seoDescription,
-    coverUrl: post.cover_url || null,
+    coverUrl: null,
   })
 
   const beforeFailed = before.checks.filter((check) => !check.passed).map((check) => check.name)
@@ -431,6 +466,7 @@ export async function fixPostContentDepthAndTone(postId: string): Promise<FixRes
     slug: post.published ? cleanSlugText(post.slug || slug) : slug,
     excerpt,
     body,
+    cover_url: null,
     primary_keyword: keyword,
     related_keywords: relatedKeywords,
     read_time: readTimeFor(body),

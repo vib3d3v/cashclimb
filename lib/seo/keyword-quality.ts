@@ -7,11 +7,13 @@ const GEO_NOISE_PATTERNS = [
 ]
 
 const STOP_WORDS = new Set([
-  'a','an','and','are','as','at','be','by','for','from','how','in','into','is','it','of','on','or','the','to','vs','what','when','why','with','without','your','you','guide','explained','beginner','beginners','checklist','step','steps','simple','best','top','cashclimb'
+  'a','an','and','are','as','at','be','by','for','from','how','in','into','is','it','of','on','or','the','to','vs','what','when','why','with','without','your','you','guide','explained','beginner','beginners','checklist','step','steps','simple','best','top','cashclimb','learn','using','use','works','work'
 ])
 
-const DANGEROUS_ENDINGS = /\b(?:a|an|and|as|at|by|for|from|in|into|of|on|or|the|to|vs|with|without|using|before|after|step[-\s]?by[-\s]?step)$/i
+const DANGEROUS_ENDINGS = /\b(?:a|an|and|as|at|by|for|from|in|into|of|on|or|the|to|vs|with|without|using|before|after|step[-\s]?by[-\s]?step|guide|checklist)$/i
 const BRANDING_PATTERN = /\s*[|:][-\s]*(?:cash\s*climb|cashclimb)\s*$/i
+const ACRONYMS = new Set(['ira', '401k', 'etf', 'etfs', 'heloc', 'apr', 'apy', 'irs', 'hsa', 'cd', 'ach', 'fdic', 'sec', 'cfpb'])
+const LOWERCASE_TITLE_WORDS = new Set(['a','an','and','as','at','by','for','from','in','of','on','or','the','to','vs','with','without'])
 
 function resetPatterns() {
   for (const pattern of GEO_NOISE_PATTERNS) pattern.lastIndex = 0
@@ -23,7 +25,9 @@ export function cleanSeoText(value: any) {
 
   return text
     .replace(BRANDING_PATTERN, '')
+    .replace(/\bCash\s*Climb\b/gi, '')
     .replace(/\bCashClimb\b/gi, '')
+    .replace(/\b(?:US|UK|CA|AU)\s*only\b/gi, '')
     .replace(/\bstep[-\s]?by[-\s]?step\s+for\b/gi, 'for')
     .replace(/\bexplained\s+a\s+beginners?\s+guide\s+for\b/gi, 'guide for')
     .replace(/\bhow\s+to\s+set\s+up\s+bill\s+pay\s+to\s+avoid\s+overdrafts?\s+for\s+low[-\s]?balance\s+accounts\b/gi, 'how to set up bill pay without overdraft fees')
@@ -66,15 +70,15 @@ export function canonicalPrimaryKeyword(value: any) {
 
 export function normalizeTargetKeyword(value: any) {
   const clean = canonicalPrimaryKeyword(value)
-  if (/bill pay/.test(clean) && /overdraft/.test(clean)) return 'set up bill pay without overdraft fees'
-  if (/tax[-\s]?loss harvesting/.test(clean) && /taxable account/.test(clean)) return 'tax-loss harvesting for taxable accounts'
+  if (/bill pay|automatic payment|automatic bill/.test(clean) && /overdraft/.test(clean)) return 'set up bill pay without overdraft fees'
+  if (/tax[-\s]?loss harvesting/.test(clean) && /(taxable account|brokerage account|investment account)/.test(clean)) return 'tax-loss harvesting for taxable accounts'
   if (/co[-\s]?ownership agreement/.test(clean) && /home/.test(clean) && /friend/.test(clean)) return 'co-ownership agreement checklist for buying a home with friends'
-  if (/currency conversion fee/.test(clean) && /(international etf|international stock|international investment)/.test(clean)) return 'avoid currency conversion fees on international investments'
+  if (/currency conversion fee/.test(clean) && /(international etf|international stock|international investment|foreign investment)/.test(clean)) return 'avoid currency conversion fees on international investments'
   if (/unauthorized hard inquiry/.test(clean) && /credit report/.test(clean)) return 'dispute unauthorized hard inquiry on credit report'
   if (/international stock/.test(clean) && /currency risk/.test(clean)) return 'buying international stocks with currency risk'
   if (/freeze/.test(clean) && /credit/.test(clean)) return 'freeze credit report'
   if (/credit utilization/.test(clean)) return 'credit utilization'
-  if (/high yield savings/.test(clean)) return 'high-yield savings account'
+  if (/high[-\s]?yield savings/.test(clean)) return 'high-yield savings account'
   return clean
 }
 
@@ -118,25 +122,22 @@ export function keywordLooksSeoWorthy(value: any) {
 export function cleanKeywordList(value: any) {
   const raw = Array.isArray(value)
     ? value
-    : String(value || '')
-      .split(/[,|;]/)
-      .map((item) => item.trim())
+    : String(value || '').split(/[,|;]/).map((item) => item.trim())
 
   return Array.from(new Set(raw
     .map(normalizeTargetKeyword)
     .filter((item) => item && keywordLooksSeoWorthy(item))))
-    .slice(0, 12)
+    .slice(0, 10)
 }
 
 export function titleCaseKeyword(value: any) {
   return canonicalPrimaryKeyword(value)
     .split(' ')
     .filter(Boolean)
-    .map((word, index) => {
+    .map((word, index, words) => {
       const lower = word.toLowerCase()
-      if (['ira', '401k', 'etf', 'etfs', 'heloc', 'apr', 'apy', 'irs', 'hsa', 'cd', 'ach'].includes(lower)) return lower.toUpperCase()
-      if (index > 0 && ['a','an','and','as','at','by','for','from','in','of','on','or','the','to','vs','with','without'].includes(lower)) return lower
-      if (lower === 'how') return 'How'
+      if (ACRONYMS.has(lower)) return lower.toUpperCase()
+      if (index > 0 && index < words.length - 1 && LOWERCASE_TITLE_WORDS.has(lower)) return lower
       return lower.charAt(0).toUpperCase() + lower.slice(1)
     })
     .join(' ')
@@ -147,9 +148,7 @@ export function titleCaseKeyword(value: any) {
 
 function removeDanglingEnding(value: string) {
   let out = cleanSeoText(value)
-  while (DANGEROUS_ENDINGS.test(out)) {
-    out = out.replace(/\s+\S+$/g, '').trim()
-  }
+  while (DANGEROUS_ENDINGS.test(out)) out = out.replace(/\s+\S+$/g, '').trim()
   return out
 }
 
@@ -176,7 +175,7 @@ function specialTitle(keyword: string) {
   if (/international stock/.test(clean) && /currency risk/.test(clean)) return 'Beginner Checklist for Buying International Stocks With Currency Risk'
   if (/freeze/.test(clean) && /credit/.test(clean)) return 'How to Freeze Your Credit Report Safely'
   if (/credit utilization/.test(clean)) return 'Credit Utilization Explained for Beginners'
-  if (/high yield savings/.test(clean)) return 'High-Yield Savings Account Checklist for Beginners'
+  if (/high[-\s]?yield savings/.test(clean)) return 'High-Yield Savings Account Checklist for Beginners'
   return null
 }
 
@@ -210,12 +209,11 @@ export function buildSeoArticleTitle(keyword: any, intent?: string | null) {
 }
 
 export function buildSeoMetaTitle(keyword: any, intent?: string | null) {
-  const clean = compactKeyword(keyword)
   const candidates = [
-    specialTitle(clean) || '',
-    buildSeoArticleTitle(clean, intent),
-    `${titleCaseKeyword(clean)} Guide`,
-    `${titleCaseKeyword(clean)} Checklist`,
+    specialTitle(keyword) || '',
+    buildSeoArticleTitle(keyword, intent),
+    `${titleCaseKeyword(compactKeyword(keyword))} Guide`,
+    `${titleCaseKeyword(compactKeyword(keyword))} Checklist`,
   ].filter(Boolean)
   return firstValid(candidates, 35, 65)
 }
@@ -231,6 +229,8 @@ function phraseForCopy(value: any) {
   if (/bill pay/.test(clean) && /overdraft/.test(clean)) return 'automatic bill pay without overdraft fees'
   if (/tax[-\s]?loss harvesting/.test(clean)) return 'tax-loss harvesting in taxable accounts'
   if (/co[-\s]?ownership agreement/.test(clean)) return 'a co-ownership agreement before buying a home with friends'
+  if (/currency conversion fee/.test(clean)) return 'currency conversion fees on international investments'
+  if (/hard inquiry/.test(clean)) return 'unauthorized hard inquiries on credit reports'
   return clean || 'this finance topic'
 }
 
@@ -246,9 +246,7 @@ export function buildSeoDescription(keyword: any, category?: string | null) {
     const clean = sentence(cleanSeoText(candidate))
     if (clean.length >= 120 && clean.length <= 160) return clean
   }
-
-  const fallback = sentence(cleanSeoText(candidates[0]))
-  return fallback.length <= 165 ? fallback : 'Learn the key checks, risks, common mistakes, and safer next steps before making this financial decision.'
+  return 'Learn the key checks, risks, common mistakes, and safer next steps before making this financial decision.'
 }
 
 export function buildExcerpt(keyword: any, category?: string | null) {
@@ -263,7 +261,6 @@ export function buildExcerpt(keyword: any, category?: string | null) {
     const clean = sentence(cleanSeoText(candidate))
     if (clean.length >= 90 && clean.length <= 155) return clean
   }
-
   return sentence(cleanSeoText(candidates[candidates.length - 1]))
 }
 

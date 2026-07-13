@@ -3,6 +3,15 @@ import { createAdminClient } from '@/lib/supabase-server'
 import { evaluateFinanceArticle, nextStatusFromEvaluation } from '@/lib/editorial-workflow'
 import type { Category, WorkflowEvaluation } from '@/types'
 import { cleanSeoTitle } from '@/lib/seo/clean-title'
+import {
+  buildSeoArticleTitle,
+  buildSeoDescription,
+  buildSeoMetaTitle,
+  buildExcerpt,
+  cleanSeoText,
+  cleanSlugText,
+  normalizeTargetKeyword,
+} from '@/lib/seo/keyword-quality'
 
 const CATEGORY_VALUES: Category[] = [
   'Investing',
@@ -489,7 +498,7 @@ export async function fixPostSeoIssues(postId: string): Promise<FixResult> {
     category,
     seoTitle: post.seo_title || post.title || '',
     seoDescription: post.seo_description || post.excerpt || '',
-    coverUrl: post.cover_url || post.cover_url || null,
+    coverUrl: null,
   })
 
   const failedBefore = before.checks
@@ -499,42 +508,11 @@ export async function fixPostSeoIssues(postId: string): Promise<FixResult> {
   const links = await relatedLinks(postId, category)
   const fixesApplied: string[] = []
 
-  let title = ensureRange(
-    post.title,
-    35,
-    70,
-    `${titleCase(keyword)}: Step-by-Step Guide`
-  )
-
-  if (!title.toLowerCase().includes(keyword.toLowerCase().split(' ')[0])) {
-    title = ensureRange(
-      `${titleCase(keyword)}: Step-by-Step Guide`,
-      35,
-      70,
-      `${titleCase(keyword)}: Step-by-Step Guide`
-    )
-  }
-
-  let excerpt = ensureRange(
-    post.excerpt,
-    80,
-    155,
-    `Learn ${keyword} with practical examples, common mistakes, safer next steps, and a clear checklist for everyday financial decisions.`
-  )
-
-  let seoTitle = ensureRange(
-    cleanSeoTitle(post.seo_title || title),
-    40,
-    65,
-    `${titleCase(keyword)} Guide`
-  )
-
-  let seoDescription = ensureRange(
-    post.seo_description || excerpt,
-    120,
-    160,
-    `A practical guide to ${keyword}, including examples, common mistakes, safer next steps, FAQs, and a clear checklist for readers.`
-  )
+  const normalizedKeyword = normalizeTargetKeyword(keyword)
+  let title = buildSeoArticleTitle(post.title || normalizedKeyword)
+  let excerpt = buildExcerpt(normalizedKeyword, category)
+  let seoTitle = buildSeoMetaTitle(post.seo_title || title)
+  let seoDescription = buildSeoDescription(normalizedKeyword, category)
 
   let body = safeString(existingBody)
 
@@ -552,7 +530,7 @@ export async function fixPostSeoIssues(postId: string): Promise<FixResult> {
   body = ensureFAQ(body, keyword)
   body = ensureConclusion(body, keyword)
 
-  const coverUrl = post.cover_url || post.cover_url || stockCoverFor(category)
+  const coverUrl = null
   const readTime = readingTime(stripHtml(body)).text
 
   const after = evaluateFinanceArticle({
@@ -581,7 +559,7 @@ export async function fixPostSeoIssues(postId: string): Promise<FixResult> {
     title,
     excerpt,
     body,
-    cover_url: coverUrl,
+    cover_url: null,
     read_time: readTime,
     seo_title: seoTitle,
     seo_description: seoDescription,
